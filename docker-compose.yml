@@ -1,0 +1,13 @@
+services:
+  db:
+    image: mysql
+    container_name: mysql-NORTHERN-LIGHTS
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "3306:3306"
+    volumes:
+      - NORTHERN-LIGHTS:/var/lib/mysql
+
+volumes:
+  NORTHERN-LIGHTS:
