@@ -31,5 +31,8 @@ public class Student extends User {
     @OneToMany(mappedBy = "student", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JsonIgnore
     private List<Answer> answers;
+
+    @Column(name = "create_at")
+    private LocalDateTime createAt;
 }
 

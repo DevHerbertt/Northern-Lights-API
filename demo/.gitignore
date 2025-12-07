@@ -31,3 +31,10 @@ build/
 
 ### VS Code ###
 .vscode/
+
+##fotos das questions
+uploads/
+
+##arquivo secreto
+application-secret.properties
+

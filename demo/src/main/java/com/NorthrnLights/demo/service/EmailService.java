@@ -1,4 +1,4 @@
-package com.NorthrnLights.demo.util;
+package com.NorthrnLights.demo.service;
 
 import com.NorthrnLights.demo.dto.TeacherDTO;
 import lombok.extern.log4j.Log4j2;
@@ -6,14 +6,18 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 
+import java.time.LocalDateTime;
+import java.util.concurrent.CompletableFuture;
+
 @Log4j2
 @Service
-public class EmailForAcessTeacher {
+public class EmailService {
 
     @Autowired
     private JavaMailSender javaMailSender;
@@ -21,11 +25,12 @@ public class EmailForAcessTeacher {
     @Value("${spring.mail.username}")
     private String remetente;
 
-    public boolean sendEmail(TeacherDTO teacherDTO) {
+    @Async
+    public CompletableFuture<Boolean> sendEmailCreat(TeacherDTO teacherDTO) {
         String email = teacherDTO.getEmail();
         if (email == null || email.trim().isEmpty() || !isValidEmail(email)) {
             log.error("E-mail inválido: {}", email);
-            return false;
+            return CompletableFuture.completedFuture(false);
         }
 
         try {
@@ -50,11 +55,49 @@ public class EmailForAcessTeacher {
             javaMailSender.send(mimeMessage);
 
             log.info("E-mail enviado com sucesso para: {}", email);
-            return true;
+            return CompletableFuture.completedFuture(true);
 
         } catch (MessagingException e) {
             log.error("Erro ao enviar e-mail: {}", e.getMessage());
-            return false;
+            return CompletableFuture.completedFuture(false);
+        }
+    }
+
+    @Async
+    public CompletableFuture<Boolean> sendEmailUpdate(TeacherDTO teacherDTO) {
+        String email = teacherDTO.getEmail();
+        if (email == null || email.trim().isEmpty() || !isValidEmail(email)) {
+            log.error("E-mail inválido: {}", email);
+            return CompletableFuture.completedFuture(false);
+        }
+
+        try {
+            // Criar e configurar o MimeMessage
+            MimeMessage mimeMessage = javaMailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, "UTF-8");
+
+            // Remetente
+            helper.setFrom(remetente);
+
+            // Destinatário
+            helper.setTo(email.trim());
+
+            // Assunto
+            helper.setSubject("Alterações na sua conta - Northern Lights");
+
+            // Corpo HTML
+            String htmlContent = buildEmailContent(teacherDTO);
+            helper.setText(htmlContent, true);
+
+            // Enviar
+            javaMailSender.send(mimeMessage);
+
+            log.info("E-mail enviado com sucesso para: {}", email);
+            return CompletableFuture.completedFuture(true);
+
+        } catch (MessagingException e) {
+            log.error("Erro ao enviar e-mail: {}", e.getMessage());
+            return CompletableFuture.completedFuture(false);
         }
     }
 
@@ -64,15 +107,20 @@ public class EmailForAcessTeacher {
 
         return String.format(
                 "<html><body>" +
-                        "<h2>Olá, %s!</h2>" +
-                        "<p>Foi criado um professor para você no site <strong>NORTHERN LIGHTS</strong>.</p>" +
-                        "<p><strong>Sua senha de acesso:</strong> %s</p>" +
+                        "<h2>Olá,Tudo bem ? %s!</h2>" +
+                        "<p>O administrador fez alterações em sua conta na <strong>NORTHERN LIGHTS</strong> as %s.</p>" +
+                        "<p><strong>Sua senha foi reiniciada:</strong> %s</p>" +
                         "<p><em>Recomendamos que você mude esta senha após o primeiro login.</em></p>" +
+                        "<p><em>Link para acesso: </em></p>" +
                         "<p>Atenciosamente,<br>Equipe Northern Lights</p>" +
                         "</body></html>",
-                userName, password
+                userName,LocalDateTime.now(), password
         );
     }
+
+
+
+
 
     private boolean isValidEmail(String email) {
         // Validação simples de e-mail (padrão básico)

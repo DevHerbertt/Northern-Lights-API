@@ -12,6 +12,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -31,7 +32,8 @@ public class StudentService {
         student.setLevelEnglish(studentDTO.getLevelEnglish());
         student.setRole(Role.STUDENT);
         student.setLastLogin(null);                    // inicia sem login
-        student.setAnswers(new ArrayList<>());        // evita NullPointer
+        student.setAnswers(new ArrayList<>());
+        student.setCreateAt(LocalDateTime.now());
 
         // Criptografa a senha antes de salvar
         student.setPassword(passwordEncoder.encode(studentDTO.getPassword()));

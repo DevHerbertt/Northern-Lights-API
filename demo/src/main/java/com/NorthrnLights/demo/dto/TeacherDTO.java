@@ -1,7 +1,10 @@
 package com.NorthrnLights.demo.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import jakarta.persistence.Column;
 import lombok.Data;
+
+import java.time.LocalDateTime;
 
 @Data
 public class TeacherDTO {
@@ -9,6 +12,8 @@ public class TeacherDTO {
  private String userName;
  private String email;
 
+ private LocalDateTime createAt;
+ private LocalDateTime updateAt;
 
  private String passWord;
 

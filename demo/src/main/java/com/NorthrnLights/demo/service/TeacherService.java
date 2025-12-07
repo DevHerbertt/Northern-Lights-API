@@ -4,7 +4,6 @@ import com.NorthrnLights.demo.domain.Role;
 import com.NorthrnLights.demo.domain.Teacher;
 import com.NorthrnLights.demo.dto.TeacherDTO;
 import com.NorthrnLights.demo.repository.TeacherRepository;
-import com.NorthrnLights.demo.util.EmailForAcessTeacher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.http.HttpStatus;
@@ -13,7 +12,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @Log4j2
@@ -22,7 +23,7 @@ public class TeacherService {
 
     private final TeacherRepository teacherRepository;
     private final PasswordEncoder passwordEncoder;
-    private final EmailForAcessTeacher emailForAcessTeacher;
+    private final EmailService emailForAcessTeacher;
 
     public Teacher create(TeacherDTO teacherDTO) {
         System.out.println("-----------------" + teacherDTO.getEmail());
@@ -46,20 +47,26 @@ public class TeacherService {
         teacher.setAge(teacherDTO.getAge());
         teacher.setClassRoom(teacherDTO.getClassRoom());
         teacher.setRole(Role.TEACHER);
-`
+        teacher.setCreateAt(LocalDateTime.now());
+
         // Restaurar a senha ORIGINAL no DTO antes de enviar o e-mail
         teacherDTO.setPassWord(senhaOriginal);
 
         // Enviar e-mail com a senha ORIGINAL
-      //  emailForAcessTeacher.sendEmail(teacherDTO);  PARA O FUTURO
+       emailForAcessTeacher.sendEmailCreat(teacherDTO);
 
         return teacherRepository.save(teacher);
     }
 
 
     public List<Teacher> findAll() {
-        return teacherRepository.findAll();
+        List<Teacher> all = teacherRepository.findAll();
+
+        return all.stream()
+                .filter(teacher -> teacher.getId() != 1) // filtra id 1
+                .collect(Collectors.toList());
     }
+
     public int findAllQuantity() {
         return teacherRepository.findAll().size();
     }
@@ -80,9 +87,11 @@ public class TeacherService {
         teacher.setAge(teacherDetails.getAge());
         teacher.setClassRoom(teacherDetails.getClassRoom());
         teacher.setRole(Role.TEACHER);
+        teacher.setUpdateAt(LocalDateTime.now());
 
         if (teacherDetails.getPassWord() != null && !teacherDetails.getPassWord().isBlank()) {
             teacher.setPassword(passwordEncoder.encode(teacherDetails.getPassWord()));
+            emailForAcessTeacher.sendEmailCreat(teacherDetails);
         }
 
         return teacherRepository.save(teacher);

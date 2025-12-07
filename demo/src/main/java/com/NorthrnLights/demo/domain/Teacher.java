@@ -6,7 +6,7 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 
-
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -25,4 +25,12 @@ public class Teacher extends User {
     @OneToOne(cascade = CascadeType.ALL)
     @JoinColumn(name = "meet_id")
     private Meet meet;
+
+    @Column(name = "create_at")
+    private LocalDateTime createAt;
+
+    @Column(name = "update_at")
+    private LocalDateTime updateAt;
+
+
 }
