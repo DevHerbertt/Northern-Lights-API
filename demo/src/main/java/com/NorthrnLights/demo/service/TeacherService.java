@@ -4,6 +4,7 @@ import com.NorthrnLights.demo.domain.Role;
 import com.NorthrnLights.demo.domain.Teacher;
 import com.NorthrnLights.demo.dto.TeacherDTO;
 import com.NorthrnLights.demo.repository.TeacherRepository;
+import com.NorthrnLights.demo.util.EmailForAcessTeacher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.http.HttpStatus;
@@ -21,20 +22,40 @@ public class TeacherService {
 
     private final TeacherRepository teacherRepository;
     private final PasswordEncoder passwordEncoder;
+    private final EmailForAcessTeacher emailForAcessTeacher;
 
     public Teacher create(TeacherDTO teacherDTO) {
+        System.out.println("-----------------" + teacherDTO.getEmail());
+        System.out.println("-----------------" + teacherDTO.getPassWord());
 
+        // Verifique se a senha está vazia ou nula
+        if (teacherDTO.getPassWord() == null || teacherDTO.getPassWord().isEmpty()) {
+            throw new IllegalArgumentException("Senha não pode estar vazia.");
+        }
+
+        // SALVAR a senha ORIGINAL antes de codificar
+        String senhaOriginal = teacherDTO.getPassWord();
+
+        // Codificar a senha
         teacherDTO.setPassWord(passwordEncoder.encode(teacherDTO.getPassWord()));
 
         Teacher teacher = new Teacher();
         teacher.setUserName(teacherDTO.getUserName());
+        teacher.setPassword(teacherDTO.getPassWord());
         teacher.setEmail(teacherDTO.getEmail());
         teacher.setAge(teacherDTO.getAge());
         teacher.setClassRoom(teacherDTO.getClassRoom());
         teacher.setRole(Role.TEACHER);
+`
+        // Restaurar a senha ORIGINAL no DTO antes de enviar o e-mail
+        teacherDTO.setPassWord(senhaOriginal);
+
+        // Enviar e-mail com a senha ORIGINAL
+      //  emailForAcessTeacher.sendEmail(teacherDTO);  PARA O FUTURO
 
         return teacherRepository.save(teacher);
     }
+
 
     public List<Teacher> findAll() {
         return teacherRepository.findAll();

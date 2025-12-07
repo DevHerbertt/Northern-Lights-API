@@ -28,6 +28,7 @@ public class TeacherController {
     public ResponseEntity<List<Teacher>> getAllTeachers() {
         return ResponseEntity.ok(teacherService.findAll());
     }
+
     @GetMapping("/quantity")
     public ResponseEntity<Integer> getTeacherQuatity() {
         return ResponseEntity.ok(teacherService.findAll().size());

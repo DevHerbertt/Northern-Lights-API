@@ -9,7 +9,7 @@ public class TeacherDTO {
  private String userName;
  private String email;
 
- @JsonIgnore
+
  private String passWord;
 
  private int age;
