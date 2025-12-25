@@ -1,7 +1,7 @@
 package com.NorthrnLights.demo.domain;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -21,16 +21,26 @@ public class Answer {
     private Long id;
 
     @ManyToOne
-    private Student student;
+    @JsonIgnoreProperties({"answers", "createAt", "lastLogin", "levelEnglish", "status"})
+    private Student student; // Student herda de User, então tem userName, email, id
 
     @ManyToOne
     @JoinColumn(name = "question_id")
-    @JsonBackReference("question-answers") // Mesmo nome da referência
+    @JsonIgnoreProperties({"options", "teacher", "exam"})
     private Question question;
 
-
+    @Lob
+    @Column(columnDefinition = "TEXT")
     private String text;
 
     @Column(name = "image_path")
     private String imagePath;
+    
+    @Column(name = "created_at")
+    private LocalDateTime createdAt;
+    
+    @PrePersist
+    protected void onCreate() {
+        createdAt = LocalDateTime.now();
+    }
 }

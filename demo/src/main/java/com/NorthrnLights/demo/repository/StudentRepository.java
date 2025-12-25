@@ -19,4 +19,5 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
     @Query("SELECT s FROM Student s LEFT JOIN FETCH s.answers WHERE s.id = :id")
     Optional<Student> findByIdWithAnswers(@Param("id") Long id);
 
+    Optional<Student> findByEmail(String email);
 }

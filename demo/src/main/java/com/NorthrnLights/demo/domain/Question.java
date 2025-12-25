@@ -1,10 +1,7 @@
 package com.NorthrnLights.demo.domain;
 
-import com.NorthrnLights.demo.domain.Answer;
-import com.NorthrnLights.demo.domain.Teacher;
-import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -12,7 +9,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -27,23 +23,54 @@ public class Question {
     private Long id;
 
     private String title;
+    
+    @Lob
+    @Column(columnDefinition = "TEXT")
     private String description;
+    
+    @Lob
+    @Column(columnDefinition = "TEXT")
+    private String portugueseTranslation; // Tradução/ajuda em português para o aluno
+    private Boolean hasHelp; // Indica se a questão tem ajuda disponível
 
-    @Column(name = "image_path")
-    private String imagePath; // Caminho para o arquivo salvo no servidor
+    private String imagePath;
 
     @ManyToOne
     @JoinColumn(name = "teacher_id")
-    @JsonBackReference("teacher-questions") // Mesmo nome da referência
+    @JsonIgnoreProperties({"questions", "meet", "createAt", "updateAt"})
     private Teacher teacher;
 
-    @OneToMany(mappedBy = "question", cascade = CascadeType.ALL)
-    @JsonManagedReference("question-answers") // Nome único para esta referência
-    private List<Answer> answers = new ArrayList<>();
+    @ManyToOne
+    @JoinColumn(name = "exam_id")
+    @JsonIgnoreProperties({"questions", "teacher"})
+    private Exam exam; // Prova à qual a questão pertence (null se não for de prova)
 
-    @Column(name = "create_at")
-    private LocalDateTime createAt;
+    @OneToMany(mappedBy = "question", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("id ASC")
+    private List<QuestionOption> options;
 
-    @Column(name = "update_at")
-    private LocalDateTime updateAt;
+    private boolean multipleChoice;
+
+    @Enumerated(EnumType.STRING)
+    private QuestionType type;
+
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+    
+    @Column(name = "expires_at")
+    private LocalDateTime expiresAt; // Data de expiração da questão (para correção automática)
+    
+    @Column(name = "visible_at")
+    private LocalDateTime visibleAt; // Data em que a questão ficará visível para os alunos
+
+    @PrePersist
+    protected void onCreate() {
+        createdAt = LocalDateTime.now();
+        updatedAt = createdAt;
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = LocalDateTime.now();
+    }
 }

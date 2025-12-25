@@ -20,6 +20,7 @@ public class Teacher extends User {
 
     @OneToMany(mappedBy = "teacher", cascade = CascadeType.ALL)
     @JsonManagedReference("teacher-questions") // Nome único para a referência
+    @ToString.Exclude
     private List<Question> questions = new ArrayList<>();
 
     @OneToOne(cascade = CascadeType.ALL)

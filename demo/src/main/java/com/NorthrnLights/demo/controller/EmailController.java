@@ -1,5 +1,6 @@
 package com.NorthrnLights.demo.controller;
 
+import com.NorthrnLights.demo.dto.MeetEmailDTO;
 import com.NorthrnLights.demo.dto.TeacherDTO;
 import com.NorthrnLights.demo.service.EmailService;
 import lombok.RequiredArgsConstructor;
@@ -43,5 +44,17 @@ public class EmailController {
         } else {
             return ResponseEntity.badRequest().body("Falha ao enviar e-mail de teste.");
         }
+    }
+
+    /**
+     * Envia e-mail com informações da sala de aula (meet)
+     */
+    @PostMapping("/send-meet")
+    public ResponseEntity<?> sendMeetEmail(@RequestBody MeetEmailDTO meetEmailDTO) {
+        log.info("Recebida solicitação para enviar e-mail de aula para {}", meetEmailDTO.getEmail());
+
+        CompletableFuture<Boolean> result = emailService.sendMeetEmail(meetEmailDTO);
+
+        return ResponseEntity.ok("O e-mail está sendo enviado!");
     }
 }

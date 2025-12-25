@@ -104,10 +104,14 @@ public class CorrectionService {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not authenticated");
         }
 
-        String email = authentication.getName();
-        log.debug("Looking for teacher with email: {}", email);
+        Object principal = authentication.getPrincipal();
+        log.debug("Principal type: {}", principal.getClass().getName());
 
-        return teacherRepository.findByEmail(email)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "Authenticated user is not a teacher"));
+        if (principal instanceof Teacher) {
+            return (Teacher) principal;
+        } else {
+            log.error("Principal não é um Teacher. Tipo: {}", principal.getClass().getName());
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Authenticated user is not a teacher");
+        }
     }
 }

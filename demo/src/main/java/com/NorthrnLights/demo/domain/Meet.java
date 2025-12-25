@@ -17,6 +17,8 @@ public class Meet {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    private String title;
+    private String description;
     private String linkOfMeet;
     private LocalDateTime dateTimeStart;
     private LocalDateTime dateTimeEnd;

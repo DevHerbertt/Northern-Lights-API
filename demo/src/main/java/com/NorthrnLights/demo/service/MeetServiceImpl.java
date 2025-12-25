@@ -30,20 +30,29 @@ public class MeetServiceImpl  {
         }
         
         if (meetRequest.getDateTimeStart() == null) {
-            throw new IllegalArgumentException("");
+            throw new IllegalArgumentException("Start date/time cannot be null");
         }
         if (meetRequest.getDateTimeEnd() == null) {
-            throw new IllegalArgumentException("date and hour no can be null");
+            throw new IllegalArgumentException("End date/time cannot be null");
         }
         if (meetRequest.getDateTimeEnd().isBefore(meetRequest.getDateTimeStart())) {
             throw new IllegalArgumentException("End date/time cannot be before start date/time");
         }
 
         Meet meet = new Meet();
+        meet.setTitle(meetRequest.getTitle());
+        meet.setDescription(meetRequest.getDescription());
         meet.setLinkOfMeet(meetRequest.getLinkOfMeet());
+        
+        // Se linkRecordClass não foi fornecido, usar o mesmo link
+        if (meetRequest.getLinkRecordClass() != null && !meetRequest.getLinkRecordClass().trim().isEmpty()) {
+            meet.setLinkRecordClass(meetRequest.getLinkRecordClass());
+        } else {
+            meet.setLinkRecordClass(meetRequest.getLinkOfMeet());
+        }
+        
         meet.setDateTimeStart(meetRequest.getDateTimeStart());
         meet.setDateTimeEnd(meetRequest.getDateTimeEnd());
-
 
         // 🟢 Setando número de presentes, default para 0 se vier nulo
         meet.setPresentInClass(
@@ -65,34 +74,51 @@ public class MeetServiceImpl  {
     public List<Meet> findWithFilters(Long id, LocalDateTime startDate, LocalDateTime endDate) {
         log.info("Searching meets with filters - ID: {}, StartDate: {}, EndDate: {}", id, startDate, endDate);
 
+        List<Meet> meets;
+        
         if (id != null) {
             Optional<Meet> meet = meetRepository.findById(id);
-            return meet.map(List::of).orElse(List.of());
-        }
-
-        if (startDate != null && endDate != null) {
+            meets = meet.map(List::of).orElse(List.of());
+        } else if (startDate != null && endDate != null) {
             if (startDate.isAfter(endDate)) {
                 throw new IllegalArgumentException("Start date cannot be after end date");
             }
-            return meetRepository.findByDateTimeStartBetween(startDate, endDate);
+            meets = meetRepository.findByDateTimeStartBetween(startDate, endDate);
+        } else if (startDate != null) {
+            meets = meetRepository.findBydateTimeEndAfter(startDate);
+        } else if (endDate != null) {
+            meets = meetRepository.findBydateTimeStartBefore(endDate);
+        } else {
+            // Se nenhum filtro for passado, retorna tudo
+            meets = meetRepository.findAll();
         }
-
-        if (startDate != null) {
-            return meetRepository.findBydateTimeEndAfter(startDate);
+        
+        // Finalizar automaticamente meets expirados
+        LocalDateTime now = LocalDateTime.now();
+        for (Meet meet : meets) {
+            if (meet.getDateTimeEnd() != null && meet.getDateTimeEnd().isBefore(now)) {
+                log.debug("Meet {} expirado em {}", meet.getId(), meet.getDateTimeEnd());
+            }
         }
-
-        if (endDate != null) {
-            return meetRepository.findBydateTimeStartBefore(endDate);
-        }
-
-        // Se nenhum filtro for passado, retorna tudo
-        return meetRepository.findAll();
+        
+        return meets;
     }
 
 
     public List<Meet> getAllMeets() {
         log.info("searching all meets");
-        return meetRepository.findAll();
+        List<Meet> meets = meetRepository.findAll();
+        
+        // Finalizar automaticamente meets expirados
+        LocalDateTime now = LocalDateTime.now();
+        for (Meet meet : meets) {
+            if (meet.getDateTimeEnd() != null && meet.getDateTimeEnd().isBefore(now)) {
+                // Meet já expirou - pode adicionar lógica adicional aqui se necessário
+                log.debug("Meet {} expirado em {}", meet.getId(), meet.getDateTimeEnd());
+            }
+        }
+        
+        return meets;
     }
 
     public int getQuantityMeets() {
@@ -110,6 +136,12 @@ public class MeetServiceImpl  {
             Meet meet = existingMeet.get();
             
             // Atualiza apenas os campos fornecidos
+            if (meetDetails.getTitle() != null) {
+                meet.setTitle(meetDetails.getTitle());
+            }
+            if (meetDetails.getDescription() != null) {
+                meet.setDescription(meetDetails.getDescription());
+            }
             if (meetDetails.getLinkOfMeet() != null) {
                 meet.setLinkOfMeet(meetDetails.getLinkOfMeet());
             }

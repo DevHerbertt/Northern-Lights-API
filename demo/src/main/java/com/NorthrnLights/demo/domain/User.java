@@ -35,4 +35,7 @@ public abstract class User {
 
     @Enumerated(EnumType.STRING)
     private Role role;
+    
+    @Column(name = "profile_image")
+    private String profileImage; // Caminho da imagem de perfil
 }
