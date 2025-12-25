@@ -1,8 +1,11 @@
 package com.NorthrnLights.demo.service;
 
+import com.NorthrnLights.demo.domain.Answer;
 import com.NorthrnLights.demo.domain.Role;
 import com.NorthrnLights.demo.domain.Student;
 import com.NorthrnLights.demo.dto.StudentRegisterDTO;
+import com.NorthrnLights.demo.repository.AnswerRepository;
+import com.NorthrnLights.demo.repository.CorrectionRepository;
 import com.NorthrnLights.demo.repository.ExamGradeRepository;
 import com.NorthrnLights.demo.repository.StudentRepository;
 import com.NorthrnLights.demo.repository.WeeklyGradeRepository;
@@ -28,6 +31,8 @@ public class StudentService {
     private final PasswordEncoder passwordEncoder;
     private final ExamGradeRepository examGradeRepository;
     private final WeeklyGradeRepository weeklyGradeRepository;
+    private final AnswerRepository answerRepository;
+    private final CorrectionRepository correctionRepository;
 
     public Student create(StudentRegisterDTO studentDTO) {
         Student student = new Student();
@@ -99,8 +104,26 @@ public class StudentService {
             log.warn("⚠️ Erro ao deletar notas semanais do estudante ID: {} - {}", id, e.getMessage());
         }
 
-        // As respostas (Answers) serão deletadas automaticamente devido ao cascade = CascadeType.ALL
-        // no relacionamento @OneToMany na entidade Student
+        // Deletar correções relacionadas às respostas do estudante
+        try {
+            List<Answer> answers = answerRepository.findByStudentIdOrderByCreatedAtDesc(id);
+            int totalCorrections = 0;
+            for (Answer answer : answers) {
+                correctionRepository.deleteByAnswerId(answer.getId());
+                totalCorrections++;
+            }
+            log.info("✅ {} correções deletadas para as respostas do estudante ID: {}", totalCorrections, id);
+        } catch (Exception e) {
+            log.warn("⚠️ Erro ao deletar correções do estudante ID: {} - {}", id, e.getMessage());
+        }
+
+        // Deletar respostas (Answers) do estudante
+        try {
+            answerRepository.deleteByStudentId(id);
+            log.info("✅ Respostas deletadas para o estudante ID: {}", id);
+        } catch (Exception e) {
+            log.warn("⚠️ Erro ao deletar respostas do estudante ID: {} - {}", id, e.getMessage());
+        }
 
         // Deletar o estudante
         studentRepository.delete(student);
