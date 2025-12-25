@@ -19,6 +19,11 @@ public interface WeeklyGradeRepository extends JpaRepository<WeeklyGrade, Long> 
     List<WeeklyGrade> findByStudentIdAndWeekStartDateBetween(Long studentId, LocalDate start, LocalDate end);
     
     Optional<WeeklyGrade> findFirstByStudentIdOrderByWeekStartDateDesc(Long studentId);
+    
+    // Deletar todas as notas semanais de um estudante
+    void deleteByStudentId(Long studentId);
 }
+
+
 
 

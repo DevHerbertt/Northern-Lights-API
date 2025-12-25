@@ -111,6 +111,13 @@ public class JwtFilter extends OncePerRequestFilter {
                     System.out.println("🔍 DEBUG: Authorities: " + auth.getAuthorities());
                     System.out.println("🔍 DEBUG: Request URI: " + request.getRequestURI());
                     System.out.println("🔍 DEBUG: Request Method: " + request.getMethod());
+                    
+                    // Verificar se a authority está correta para DELETE /students
+                    if (request.getRequestURI().startsWith("/students") && request.getMethod().equals("DELETE")) {
+                        System.out.println("🔍 DEBUG: Verificando DELETE /students - Authorities: " + auth.getAuthorities());
+                        System.out.println("🔍 DEBUG: Has ROLE_TEACHER: " + auth.getAuthorities().stream()
+                                .anyMatch(a -> a.getAuthority().equals("ROLE_TEACHER")));
+                    }
                 }
             } else {
                 System.out.println("❌ DEBUG: User not found or token invalid");

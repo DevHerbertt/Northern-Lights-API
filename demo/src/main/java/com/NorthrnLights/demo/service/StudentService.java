@@ -3,13 +3,16 @@ package com.NorthrnLights.demo.service;
 import com.NorthrnLights.demo.domain.Role;
 import com.NorthrnLights.demo.domain.Student;
 import com.NorthrnLights.demo.dto.StudentRegisterDTO;
+import com.NorthrnLights.demo.repository.ExamGradeRepository;
 import com.NorthrnLights.demo.repository.StudentRepository;
+import com.NorthrnLights.demo.repository.WeeklyGradeRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
@@ -23,6 +26,8 @@ public class StudentService {
 
     private final StudentRepository studentRepository;
     private final PasswordEncoder passwordEncoder;
+    private final ExamGradeRepository examGradeRepository;
+    private final WeeklyGradeRepository weeklyGradeRepository;
 
     public Student create(StudentRegisterDTO studentDTO) {
         Student student = new Student();
@@ -69,13 +74,38 @@ public class StudentService {
         return studentRepository.save(student);
     }
 
+    @Transactional
     public ResponseEntity<String> delete(Long id) {
         Student student = studentRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Student not found"
                 ));
 
+        log.info("🗑️ Iniciando exclusão do estudante ID: {} - Nome: {}", id, student.getUserName());
+
+        // Deletar notas de provas relacionadas
+        try {
+            examGradeRepository.deleteByStudentId(id);
+            log.info("✅ Notas de provas deletadas para o estudante ID: {}", id);
+        } catch (Exception e) {
+            log.warn("⚠️ Erro ao deletar notas de provas do estudante ID: {} - {}", id, e.getMessage());
+        }
+
+        // Deletar notas semanais relacionadas
+        try {
+            weeklyGradeRepository.deleteByStudentId(id);
+            log.info("✅ Notas semanais deletadas para o estudante ID: {}", id);
+        } catch (Exception e) {
+            log.warn("⚠️ Erro ao deletar notas semanais do estudante ID: {} - {}", id, e.getMessage());
+        }
+
+        // As respostas (Answers) serão deletadas automaticamente devido ao cascade = CascadeType.ALL
+        // no relacionamento @OneToMany na entidade Student
+
+        // Deletar o estudante
         studentRepository.delete(student);
+        log.info("✅ Estudante ID: {} deletado com sucesso", id);
+
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
 }

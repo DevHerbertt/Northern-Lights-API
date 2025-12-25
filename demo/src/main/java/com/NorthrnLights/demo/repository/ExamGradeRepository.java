@@ -23,5 +23,8 @@ public interface ExamGradeRepository extends JpaRepository<ExamGrade, Long> {
     
     // Buscar notas gerais (sem examId) para um estudante
     List<ExamGrade> findByStudentIdAndExamIsNullOrderByCreatedAtDesc(Long studentId);
+    
+    // Deletar todas as notas de um estudante
+    void deleteByStudentId(Long studentId);
 }
 

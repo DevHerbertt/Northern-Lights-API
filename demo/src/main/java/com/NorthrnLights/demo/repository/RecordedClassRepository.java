@@ -14,3 +14,5 @@ public interface RecordedClassRepository extends JpaRepository<RecordedClass, Lo
     List<RecordedClass> findAllByOrderByClassDateDesc();
 }
 
+
+

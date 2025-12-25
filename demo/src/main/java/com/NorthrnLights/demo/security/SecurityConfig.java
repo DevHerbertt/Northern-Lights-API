@@ -130,9 +130,10 @@ public class SecurityConfig {
                             .requestMatchers(HttpMethod.GET, "/meets", "/meets/**").hasAnyRole("TEACHER", "STUDENT")
 
                             // Endpoints de estudantes - apenas professores podem gerenciar
+                            // IMPORTANTE: Ordem específica antes de genérica
+                            .requestMatchers(HttpMethod.DELETE, "/students/**").hasAnyRole("TEACHER")
                             .requestMatchers(HttpMethod.POST, "/students/**").hasAnyRole("TEACHER")
                             .requestMatchers(HttpMethod.PUT, "/students/**").hasAnyRole("TEACHER")
-                            .requestMatchers(HttpMethod.DELETE, "/students/**").hasAnyRole("TEACHER")
                             .requestMatchers(HttpMethod.GET, "/students/**").hasAnyRole("TEACHER", "STUDENT")
 
                             // Endpoints de professores - apenas professores
