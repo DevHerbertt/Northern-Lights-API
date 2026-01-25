@@ -30,6 +30,10 @@ services:
         fromDatabase:
           name: northern-lights-db
           property: password
+      - key: DATABASE_DRIVER
+        value: org.postgresql.Driver
+      - key: HIBERNATE_DIALECT
+        value: org.hibernate.dialect.PostgreSQLDialect
       - key: JWT_SECRET
         generateValue: true
 

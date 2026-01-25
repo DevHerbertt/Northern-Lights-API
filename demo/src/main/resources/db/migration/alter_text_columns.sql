@@ -16,3 +16,6 @@ ALTER TABLE question MODIFY COLUMN portuguese_translation TEXT;
 
 
 
+
+
+
