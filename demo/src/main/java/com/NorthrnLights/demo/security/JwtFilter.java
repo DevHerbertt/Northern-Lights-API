@@ -55,10 +55,25 @@ public class JwtFilter extends OncePerRequestFilter {
         }
 
         final String token = authHeader.substring(7);
-        final String email = jwtService.extractUsername(token);
+        String email = null;
+        try {
+            email = jwtService.extractUsername(token);
+        } catch (Exception e) {
+            System.out.println("❌ DEBUG: Erro ao extrair email do token: " + e.getMessage());
+            System.out.println("❌ DEBUG: Token pode estar expirado ou inválido para: " + requestPath);
+            filterChain.doFilter(request, response);
+            return;
+        }
 
         System.out.println("🔐 DEBUG: Processing request to: " + request.getRequestURI());
         System.out.println("🔐 DEBUG: Token email: " + email);
+        
+        // Log específico para requisições a /teachers
+        if (requestPath != null && requestPath.startsWith("/teachers")) {
+            System.out.println("🔍 DEBUG: Requisição para /teachers detectada");
+            System.out.println("🔍 DEBUG: Method: " + request.getMethod());
+            System.out.println("🔍 DEBUG: Email do token: " + email);
+        }
 
         if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             User user = userRepository.findByEmail(email).orElse(null);
@@ -112,6 +127,14 @@ public class JwtFilter extends OncePerRequestFilter {
                     System.out.println("🔍 DEBUG: Authorities: " + auth.getAuthorities());
                     System.out.println("🔍 DEBUG: Request URI: " + request.getRequestURI());
                     System.out.println("🔍 DEBUG: Request Method: " + request.getMethod());
+                    
+                    // Log específico para requisições a /teachers
+                    if (requestPath != null && requestPath.startsWith("/teachers")) {
+                        System.out.println("🔍 DEBUG: Verificando acesso a /teachers");
+                        System.out.println("🔍 DEBUG: Has ROLE_TEACHER: " + auth.getAuthorities().stream()
+                                .anyMatch(a -> a.getAuthority().equals("ROLE_TEACHER")));
+                        System.out.println("🔍 DEBUG: All authorities: " + auth.getAuthorities());
+                    }
                     
                     // Verificar se a authority está correta para DELETE /students
                     if (request.getRequestURI().startsWith("/students") && request.getMethod().equals("DELETE")) {
