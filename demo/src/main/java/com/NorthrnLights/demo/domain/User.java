@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
 @Entity
+@Table(name = "\"user\"") // Escapa o nome da tabela pois "user" é palavra reservada no PostgreSQL
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
