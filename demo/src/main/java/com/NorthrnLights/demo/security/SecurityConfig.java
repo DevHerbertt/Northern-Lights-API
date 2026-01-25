@@ -161,18 +161,35 @@ public class SecurityConfig {
 
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // ⚠️ Configuração SUPER permissiva para desenvolvimento
-        configuration.setAllowedOriginPatterns(Arrays.asList("*"));
-        configuration.setAllowedMethods(Arrays.asList("*"));
+        // Obter URLs permitidas de variáveis de ambiente ou usar padrões
+        String allowedOriginsEnv = System.getenv("ALLOWED_ORIGINS");
+        
+        if (allowedOriginsEnv != null && !allowedOriginsEnv.isEmpty()) {
+            // Se houver variável de ambiente, usar ela (separada por vírgula)
+            String[] origins = allowedOriginsEnv.split(",");
+            configuration.setAllowedOrigins(Arrays.asList(origins));
+            System.out.println("✅ DEBUG: CORS configurado com origens específicas: " + Arrays.toString(origins));
+        } else {
+            // Padrão: usar patterns para aceitar localhost + todos os domínios do Vercel
+            // setAllowedOriginPatterns permite wildcards e funciona com allowCredentials
+            configuration.setAllowedOriginPatterns(Arrays.asList(
+                "http://localhost:*",                              // Qualquer porta do localhost
+                "https://*.vercel.app",                            // Todos os domínios do Vercel (preview e production)
+                "https://northern-lights-frontend-2i36.vercel.app" // URL específica do frontend
+            ));
+            System.out.println("✅ DEBUG: CORS configurado com patterns (localhost + Vercel)");
+        }
+
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
-        configuration.setExposedHeaders(Arrays.asList("*"));
+        configuration.setExposedHeaders(Arrays.asList("Authorization", "Content-Type"));
         configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
 
-        System.out.println("✅ DEBUG: CORS configurado - Permitindo tudo");
+        System.out.println("✅ DEBUG: CORS configurado com sucesso");
         return source;
     }
 
