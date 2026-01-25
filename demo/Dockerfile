@@ -1,21 +1,19 @@
 # Dockerfile para deploy no Render
-FROM eclipse-temurin:21-jdk-alpine AS build
+FROM maven:3.9-eclipse-temurin-21 AS build
 
 WORKDIR /app
 
-# Copiar arquivos Maven
+# Copiar arquivos Maven primeiro (para cache de dependências)
 COPY pom.xml .
-COPY mvnw .
-COPY .mvn .mvn
 
 # Baixar dependências (cache layer)
-RUN chmod +x ./mvnw && ./mvnw dependency:go-offline -B
+RUN mvn dependency:go-offline -B
 
 # Copiar código fonte
 COPY src ./src
 
 # Build da aplicação
-RUN ./mvnw clean package -DskipTests
+RUN mvn clean package -DskipTests
 
 # Imagem final
 FROM eclipse-temurin:21-jre-alpine
