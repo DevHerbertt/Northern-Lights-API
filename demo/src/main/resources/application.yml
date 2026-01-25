@@ -8,7 +8,7 @@ spring:
     url: ${DATABASE_URL:jdbc:mysql://localhost:3306/northern_lights?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=America/Sao_Paulo}
     username: ${DATABASE_USERNAME:root}
     password: ${DATABASE_PASSWORD:root}
-    driver-class-name: com.mysql.cj.jdbc.Driver
+    driver-class-name: ${DATABASE_DRIVER:com.mysql.cj.jdbc.Driver}
     hikari:
       maximum-pool-size: 10
       minimum-idle: 5
@@ -25,7 +25,7 @@ spring:
     show-sql: ${SHOW_SQL:false}
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.MySQLDialect
+        dialect: ${HIBERNATE_DIALECT:org.hibernate.dialect.MySQLDialect}
         format_sql: false
         connection:
           characterEncoding: utf8
