@@ -1,7 +1,6 @@
 services:
   - type: web
     name: northern-lights-api
-    runtime: java
     rootDir: demo
     buildCommand: ./mvnw clean package -DskipTests
     startCommand: java -jar target/*.jar
