@@ -21,43 +21,66 @@ public class DatabaseConfig {
     public DataSource dataSource(DataSourceProperties properties) {
         // Tentar ler da variável de ambiente primeiro
         String url = System.getenv("DATABASE_URL");
+        String username = System.getenv("DATABASE_USERNAME");
+        String password = System.getenv("DATABASE_PASSWORD");
+        
+        log.info("DATABASE_URL da variável de ambiente: {}", 
+                url != null && url.length() > 30 ? url.substring(0, 30) + "..." : url);
+        log.info("DATABASE_URL do properties: {}", 
+                properties.getUrl() != null && properties.getUrl().length() > 30 
+                    ? properties.getUrl().substring(0, 30) + "..." : properties.getUrl());
+        
+        // Se não houver DATABASE_URL da variável de ambiente, usar do properties
         if (url == null || url.trim().isEmpty()) {
             url = properties.getUrl();
-        }
-        
-        String username = System.getenv("DATABASE_USERNAME");
-        if (username == null || username.trim().isEmpty()) {
-            username = properties.getUsername();
-        }
-        
-        String password = System.getenv("DATABASE_PASSWORD");
-        if (password == null || password.trim().isEmpty()) {
-            password = properties.getPassword();
+            if (username == null || username.trim().isEmpty()) {
+                username = properties.getUsername();
+            }
+            if (password == null || password.trim().isEmpty()) {
+                password = properties.getPassword();
+            }
+            log.info("Usando configuração do application.yml (MySQL)");
+        } else {
+            log.info("DATABASE_URL encontrada nas variáveis de ambiente");
         }
 
-        // Se DATABASE_URL estiver vazia, usar configuração padrão do application.yml
-        if (url == null || url.trim().isEmpty() || !url.contains("postgresql://") && !url.contains("postgres://")) {
-            log.info("DATABASE_URL não encontrada ou não é PostgreSQL, usando configuração padrão do application.yml");
-            // Usar configuração padrão do Spring Boot
+        // Validar que temos uma URL válida
+        if (url == null || url.trim().isEmpty()) {
+            log.error("Nenhuma URL de banco de dados encontrada! Verifique DATABASE_URL ou spring.datasource.url");
+            throw new IllegalStateException("URL do banco de dados não configurada. Configure DATABASE_URL ou spring.datasource.url");
+        }
+
+        // Se a URL é PostgreSQL (formato Render ou JDBC), processar
+        if (url.startsWith("postgresql://") || url.startsWith("postgres://") || url.startsWith("jdbc:postgresql://")) {
+            log.info("Detectado PostgreSQL - Processando URL");
+            return processPostgreSQLUrl(url, username, password);
+        }
+        
+        // Se é MySQL ou outra URL JDBC, usar diretamente
+        if (url.startsWith("jdbc:")) {
+            log.info("Detectado banco via JDBC URL: {}", url.startsWith("jdbc:mysql") ? "MySQL" : "Outro");
             return DataSourceBuilder.create()
-                    .url(properties.getUrl())
-                    .username(properties.getUsername())
-                    .password(properties.getPassword())
+                    .url(url)
+                    .username(username)
+                    .password(password)
                     .driverClassName(properties.getDriverClassName())
                     .build();
         }
-
-        log.info("DATABASE_URL detectada: {}", url.substring(0, Math.min(30, url.length())) + "...");
         
-        // Se a URL começar com postgresql:// (formato do Render), converter para JDBC
-        if (url.startsWith("postgresql://") || url.startsWith("postgres://")) {
-            log.info("Detectado PostgreSQL - Convertendo URL do Render para formato JDBC");
-            return createPostgreSQLDataSource(url, username, password);
-        }
-
-        // Se já estiver no formato jdbc:postgresql, usar PostgreSQL
+        // Se chegou aqui, é uma URL não reconhecida - usar properties como fallback
+        log.warn("URL não reconhecida, usando configuração padrão do application.yml");
+        return DataSourceBuilder.create()
+                .url(properties.getUrl())
+                .username(properties.getUsername())
+                .password(properties.getPassword())
+                .driverClassName(properties.getDriverClassName())
+                .build();
+    }
+    
+    private DataSource processPostgreSQLUrl(String url, String username, String password) {
+        // Se já está no formato JDBC, usar diretamente
         if (url.startsWith("jdbc:postgresql://")) {
-            log.info("Detectado PostgreSQL via JDBC URL");
+            log.info("URL já está no formato JDBC PostgreSQL");
             return DataSourceBuilder.create()
                     .driverClassName("org.postgresql.Driver")
                     .url(url)
@@ -65,26 +88,11 @@ public class DatabaseConfig {
                     .password(password)
                     .build();
         }
+        
+        // Converter formato Render (postgresql://) para JDBC
+        log.info("Convertendo URL do Render para formato JDBC");
+        return createPostgreSQLDataSource(url, username, password);
 
-        // Se já estiver no formato jdbc:mysql, usar MySQL
-        if (url.startsWith("jdbc:mysql://")) {
-            log.info("Detectado MySQL via JDBC URL");
-            return DataSourceBuilder.create()
-                    .driverClassName("com.mysql.cj.jdbc.Driver")
-                    .url(url)
-                    .username(username)
-                    .password(password)
-                    .build();
-        }
-
-        // Fallback: tentar usar diretamente
-        log.warn("Formato de URL não reconhecido, tentando usar diretamente: {}", 
-                url.substring(0, Math.min(50, url.length())) + "...");
-        return DataSourceBuilder.create()
-                .url(url)
-                .username(username)
-                .password(password)
-                .build();
     }
 
     private DataSource createPostgreSQLDataSource(String url, String username, String password) {
