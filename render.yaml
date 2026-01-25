@@ -1,7 +1,6 @@
 services:
   - type: web
     name: northern-lights-api
-    env: java
     rootDir: demo
     buildCommand: ./mvnw clean package -DskipTests
     startCommand: java -jar target/*.jar
@@ -26,7 +25,7 @@ services:
       - key: DATABASE_USERNAME
         fromDatabase:
           name: northern-lights-db
-          property: username
+          property: user
       - key: DATABASE_PASSWORD
         fromDatabase:
           name: northern-lights-db
