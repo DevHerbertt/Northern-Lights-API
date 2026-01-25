@@ -15,7 +15,7 @@ services:
       - key: SHOW_SQL
         value: false
       - key: UPLOAD_DIR
-        value: uploads
+        value: /tmp/uploads
       - key: JWT_EXPIRATION
         value: 86400000
       - key: DATABASE_URL

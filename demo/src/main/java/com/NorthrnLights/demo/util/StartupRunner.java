@@ -59,8 +59,25 @@ public class StartupRunner implements CommandLineRunner {
             if (new File(uploadDir).isAbsolute()) {
                 baseDir = uploadDir;
             } else {
-                baseDir = System.getProperty("user.dir") + File.separator + uploadDir;
+                String userDir = System.getProperty("user.dir");
+                baseDir = userDir + File.separator + uploadDir;
+                
+                // Verificar se podemos escrever no diretório
+                File testDir = new File(baseDir);
+                if (!testDir.exists()) {
+                    File parentDir = testDir.getParentFile();
+                    if (parentDir != null && !parentDir.canWrite()) {
+                        // Se não puder escrever, usar /tmp como fallback
+                        log.warn("⚠️ Não é possível escrever em {}. Usando /tmp como fallback.", baseDir);
+                        baseDir = "/tmp" + File.separator + uploadDir;
+                    }
+                } else if (!testDir.canWrite()) {
+                    log.warn("⚠️ Não é possível escrever em {}. Usando /tmp como fallback.", baseDir);
+                    baseDir = "/tmp" + File.separator + uploadDir;
+                }
             }
+
+            log.info("📁 Diretório base de uploads: {}", baseDir);
 
             // Criar subdiretórios necessários
             String[] subDirs = {
@@ -73,11 +90,26 @@ public class StartupRunner implements CommandLineRunner {
 
             for (String subDir : subDirs) {
                 Path dirPath = Paths.get(baseDir, subDir);
-                if (!Files.exists(dirPath)) {
-                    Files.createDirectories(dirPath);
-                    log.info("✅ Diretório criado: {}", dirPath.toAbsolutePath());
-                } else {
-                    log.debug("📁 Diretório já existe: {}", dirPath.toAbsolutePath());
+                try {
+                    if (!Files.exists(dirPath)) {
+                        Files.createDirectories(dirPath);
+                        log.info("✅ Diretório criado: {}", dirPath.toAbsolutePath());
+                        
+                        // Verificar se realmente foi criado e tem permissões
+                        if (Files.exists(dirPath) && Files.isWritable(dirPath)) {
+                            log.info("✅ Permissões verificadas para: {}", dirPath.toAbsolutePath());
+                        } else {
+                            log.error("❌ Diretório criado mas sem permissões de escrita: {}", dirPath.toAbsolutePath());
+                        }
+                    } else {
+                        if (Files.isWritable(dirPath)) {
+                            log.debug("📁 Diretório já existe e tem permissões: {}", dirPath.toAbsolutePath());
+                        } else {
+                            log.warn("⚠️ Diretório existe mas sem permissões de escrita: {}", dirPath.toAbsolutePath());
+                        }
+                    }
+                } catch (Exception e) {
+                    log.error("❌ Erro ao criar diretório {}: {}", subDir, e.getMessage(), e);
                 }
             }
 

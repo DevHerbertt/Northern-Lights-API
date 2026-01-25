@@ -43,18 +43,39 @@ public class QuestionService {
 
     // Método para obter o diretório base de uploads
     private String getImageUploadDir() {
-        // Se uploadDir for relativo, usar baseado no diretório do projeto
-        // Se for absoluto, usar diretamente
         String baseDir;
+        
+        // Se uploadDir for absoluto, usar diretamente
         if (new File(uploadDir).isAbsolute()) {
             baseDir = uploadDir;
         } else {
-            baseDir = System.getProperty("user.dir") + File.separator + uploadDir;
+            // Tentar usar user.dir primeiro
+            String userDir = System.getProperty("user.dir");
+            baseDir = userDir + File.separator + uploadDir;
+            
+            // Verificar se podemos escrever no diretório
+            File testDir = new File(baseDir);
+            if (!testDir.exists()) {
+                // Tentar criar o diretório pai para verificar permissões
+                File parentDir = testDir.getParentFile();
+                if (parentDir != null && !parentDir.canWrite()) {
+                    // Se não puder escrever em user.dir, usar /tmp como fallback
+                    log.warn("⚠️ Não é possível escrever em {}. Usando /tmp como fallback.", baseDir);
+                    baseDir = "/tmp" + File.separator + uploadDir;
+                }
+            } else if (!testDir.canWrite()) {
+                // Se o diretório existe mas não podemos escrever, usar /tmp
+                log.warn("⚠️ Não é possível escrever em {}. Usando /tmp como fallback.", baseDir);
+                baseDir = "/tmp" + File.separator + uploadDir;
+            }
         }
+        
         // Garantir que termina com separador
         if (!baseDir.endsWith(File.separator)) {
             baseDir += File.separator;
         }
+        
+        log.debug("🔍 Diretório de upload determinado: {}", baseDir);
         return baseDir;
     }
 
