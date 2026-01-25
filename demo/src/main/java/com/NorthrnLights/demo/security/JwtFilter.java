@@ -75,7 +75,13 @@ public class JwtFilter extends OncePerRequestFilter {
             System.out.println("🔍 DEBUG: Email do token: " + email);
         }
 
-        if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+        if (email != null) {
+            // Verificar se já está autenticado, mas sempre validar o token se presente
+            Authentication existingAuth = SecurityContextHolder.getContext().getAuthentication();
+            if (existingAuth != null && existingAuth.isAuthenticated()) {
+                System.out.println("ℹ️ DEBUG: Já autenticado, mas validando token novamente para: " + requestPath);
+            }
+            
             User user = userRepository.findByEmail(email).orElse(null);
 
             if (user != null && jwtService.validateToken(token)) {
@@ -121,6 +127,13 @@ public class JwtFilter extends OncePerRequestFilter {
 
                 // Debug após autenticação
                 Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+                
+                // Log específico para /teachers
+                if (requestPath != null && requestPath.startsWith("/teachers")) {
+                    System.out.println("🔍 DEBUG: Autenticação configurada para /teachers");
+                    System.out.println("🔍 DEBUG: Authority criada: " + authority);
+                    System.out.println("🔍 DEBUG: Authorities no contexto: " + auth.getAuthorities());
+                }
                 System.out.println("🔍 DEBUG: Authentication set: " + (auth != null));
                 if (auth != null) {
                     System.out.println("🔍 DEBUG: Principal type: " + auth.getPrincipal().getClass().getSimpleName());

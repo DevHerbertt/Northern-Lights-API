@@ -136,8 +136,11 @@ public class SecurityConfig {
                             .requestMatchers(HttpMethod.PUT, "/students/**").hasAnyRole("TEACHER")
                             .requestMatchers(HttpMethod.GET, "/students/**").hasAnyRole("TEACHER", "STUDENT")
 
-                            // Endpoints de professores - apenas professores
-                            .requestMatchers("/teachers/**").hasAnyRole("TEACHER")
+                            // Endpoints de professores - apenas professores (especificar métodos explicitamente)
+                            .requestMatchers(HttpMethod.GET, "/teachers", "/teachers/**").hasAnyRole("TEACHER")
+                            .requestMatchers(HttpMethod.POST, "/teachers", "/teachers/**").hasAnyRole("TEACHER")
+                            .requestMatchers(HttpMethod.PUT, "/teachers/**").hasAnyRole("TEACHER")
+                            .requestMatchers(HttpMethod.DELETE, "/teachers/**").hasAnyRole("TEACHER")
 
                             // Endpoints de email - apenas professores
                             .requestMatchers("/email/**").hasAnyRole("TEACHER")
