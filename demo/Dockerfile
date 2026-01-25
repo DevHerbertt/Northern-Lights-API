@@ -15,21 +15,20 @@ COPY src ./src
 # Build da aplicação
 RUN mvn clean package -DskipTests
 
+# Verificar se o JAR foi criado
+RUN ls -la /app/target/*.jar
+
 # Imagem final
 FROM eclipse-temurin:21-jre-alpine
 
 WORKDIR /app
 
-# Copiar JAR do build
-COPY --from=build /app/target/*.jar app.jar
+# Copiar JAR do build (usando nome específico)
+COPY --from=build /app/target/todo-api-*.jar app.jar
 
 # Expor porta
 EXPOSE 8080
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:${PORT:-8080}/actuator/health || exit 1
-
 # Executar aplicação
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["java", "-Djava.security.egd=file:/dev/./urandom", "-jar", "app.jar"]
 
