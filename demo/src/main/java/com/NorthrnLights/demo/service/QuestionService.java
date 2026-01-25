@@ -370,15 +370,37 @@ public class QuestionService {
         File uploadDirectory = new File(getImageUploadDir() + subDir);
         log.info("🔍 DEBUG saveImage: Diretório de upload: {}", uploadDirectory.getAbsolutePath());
         log.info("🔍 DEBUG saveImage: Diretório existe? {}", uploadDirectory.exists());
+        log.info("🔍 DEBUG saveImage: Diretório pai pode escrever? {}", uploadDirectory.getParentFile() != null ? uploadDirectory.getParentFile().canWrite() : "N/A");
         
         if (!uploadDirectory.exists()) {
+            // Tentar criar o diretório pai primeiro se necessário
+            File parentDir = uploadDirectory.getParentFile();
+            if (parentDir != null && !parentDir.exists()) {
+                boolean parentCreated = parentDir.mkdirs();
+                log.info("🔍 DEBUG saveImage: Diretório pai criado? {}", parentCreated);
+            }
+            
             boolean created = uploadDirectory.mkdirs();
             log.info("🔍 DEBUG saveImage: Tentativa de criar diretório: {}", created);
-            if (!created && !uploadDirectory.exists()) {
-                log.error("❌ Erro ao criar diretório: {}", uploadDirectory.getAbsolutePath());
-                throw new IOException("Não foi possível criar o diretório: " + uploadDirectory.getAbsolutePath());
+            
+            if (!uploadDirectory.exists()) {
+                // Se ainda não existe, tentar criar com Files.createDirectories (mais robusto)
+                try {
+                    Files.createDirectories(uploadDirectory.toPath());
+                    log.info("✅ Diretório criado usando Files.createDirectories: {}", uploadDirectory.getAbsolutePath());
+                } catch (Exception e) {
+                    log.error("❌ Erro ao criar diretório: {}", uploadDirectory.getAbsolutePath(), e);
+                    throw new IOException("Não foi possível criar o diretório: " + uploadDirectory.getAbsolutePath() + ". Erro: " + e.getMessage(), e);
+                }
+            } else {
+                log.info("✅ Diretório criado: {}", uploadDirectory.getAbsolutePath());
             }
-            log.info("✅ Diretório criado: {}", uploadDirectory.getAbsolutePath());
+        }
+        
+        // Verificar permissões de escrita
+        if (!uploadDirectory.canWrite()) {
+            log.error("❌ Diretório existe mas não tem permissões de escrita: {}", uploadDirectory.getAbsolutePath());
+            throw new IOException("Diretório existe mas não tem permissões de escrita: " + uploadDirectory.getAbsolutePath());
         }
         
         File dest = new File(uploadDirectory, filename);
@@ -457,11 +479,32 @@ public class QuestionService {
             // Criar diretório completo se não existir
             File uploadDirectory = new File(getImageUploadDir() + subDir);
             if (!uploadDirectory.exists()) {
-                boolean created = uploadDirectory.mkdirs();
-                if (!created && !uploadDirectory.exists()) {
-                    throw new IOException("Não foi possível criar o diretório: " + uploadDirectory.getAbsolutePath());
+                // Tentar criar o diretório pai primeiro se necessário
+                File parentDir = uploadDirectory.getParentFile();
+                if (parentDir != null && !parentDir.exists()) {
+                    parentDir.mkdirs();
                 }
-                log.info("✅ Diretório criado: {}", uploadDirectory.getAbsolutePath());
+                
+                // Tentar criar com mkdirs primeiro
+                boolean created = uploadDirectory.mkdirs();
+                if (!uploadDirectory.exists()) {
+                    // Se ainda não existe, tentar criar com Files.createDirectories (mais robusto)
+                    try {
+                        Files.createDirectories(uploadDirectory.toPath());
+                        log.info("✅ Diretório criado usando Files.createDirectories: {}", uploadDirectory.getAbsolutePath());
+                    } catch (Exception e) {
+                        log.error("❌ Erro ao criar diretório: {}", uploadDirectory.getAbsolutePath(), e);
+                        throw new IOException("Não foi possível criar o diretório: " + uploadDirectory.getAbsolutePath() + ". Erro: " + e.getMessage(), e);
+                    }
+                } else {
+                    log.info("✅ Diretório criado: {}", uploadDirectory.getAbsolutePath());
+                }
+            }
+            
+            // Verificar permissões de escrita
+            if (!uploadDirectory.canWrite()) {
+                log.error("❌ Diretório existe mas não tem permissões de escrita: {}", uploadDirectory.getAbsolutePath());
+                throw new IOException("Diretório existe mas não tem permissões de escrita: " + uploadDirectory.getAbsolutePath());
             }
             
             File dest = new File(uploadDirectory, filename);
