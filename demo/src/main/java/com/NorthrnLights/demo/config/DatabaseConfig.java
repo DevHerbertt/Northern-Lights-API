@@ -8,7 +8,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 
-import jakarta.sql.DataSource;
+import javax.sql.DataSource;
 import java.net.URI;
 import java.net.URISyntaxException;
 
