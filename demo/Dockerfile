@@ -12,8 +12,8 @@ RUN mvn dependency:go-offline -B
 # Copiar código fonte
 COPY src ./src
 
-# Build da aplicação
-RUN mvn clean package -DskipTests
+# Build da aplicação (pular compilação e execução de testes)
+RUN mvn clean package -DskipTests -Dmaven.test.skip=true
 
 # Verificar se o JAR foi criado
 RUN ls -la /app/target/*.jar
