@@ -8,6 +8,8 @@ import com.NorthrnLights.demo.repository.StudentRepository;
 import com.NorthrnLights.demo.repository.TeacherRepository;
 import com.NorthrnLights.demo.repository.UserRepository;
 import com.NorthrnLights.demo.util.JwtService;
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -58,9 +60,20 @@ public class JwtFilter extends OncePerRequestFilter {
         String email = null;
         try {
             email = jwtService.extractUsername(token);
-        } catch (Exception e) {
+            // Validar token antes de processar
+            if (!jwtService.validateToken(token)) {
+                System.out.println("❌ DEBUG: Token inválido ou expirado para: " + requestPath);
+                filterChain.doFilter(request, response);
+                return;
+            }
+        } catch (ExpiredJwtException e) {
+            System.out.println("❌ DEBUG: Token expirado para: " + requestPath);
+            System.out.println("❌ DEBUG: Data de expiração: " + e.getClaims().getExpiration());
+            filterChain.doFilter(request, response);
+            return;
+        } catch (JwtException | IllegalArgumentException e) {
             System.out.println("❌ DEBUG: Erro ao extrair email do token: " + e.getMessage());
-            System.out.println("❌ DEBUG: Token pode estar expirado ou inválido para: " + requestPath);
+            System.out.println("❌ DEBUG: Token pode estar inválido para: " + requestPath);
             filterChain.doFilter(request, response);
             return;
         }
@@ -124,9 +137,15 @@ public class JwtFilter extends OncePerRequestFilter {
                 
                 // Log específico para /teachers
                 if (requestPath != null && requestPath.startsWith("/teachers")) {
+                    System.out.println("🔍 DEBUG: ========== AUTENTICAÇÃO PARA /teachers ==========");
                     System.out.println("🔍 DEBUG: Autenticação configurada para /teachers");
                     System.out.println("🔍 DEBUG: Authority criada: " + authority);
                     System.out.println("🔍 DEBUG: Authorities no contexto: " + auth.getAuthorities());
+                    System.out.println("🔍 DEBUG: Principal type: " + auth.getPrincipal().getClass().getSimpleName());
+                    System.out.println("🔍 DEBUG: Is authenticated: " + auth.isAuthenticated());
+                    System.out.println("🔍 DEBUG: Has ROLE_TEACHER: " + auth.getAuthorities().stream()
+                        .anyMatch(a -> a.getAuthority().equals("ROLE_TEACHER")));
+                    System.out.println("🔍 DEBUG: =================================================");
                 }
                 System.out.println("🔍 DEBUG: Authentication set: " + (auth != null));
                 if (auth != null) {
