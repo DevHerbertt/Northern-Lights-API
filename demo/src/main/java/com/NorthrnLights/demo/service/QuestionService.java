@@ -10,6 +10,7 @@ import com.NorthrnLights.demo.repository.QuestionRepository;
 import com.NorthrnLights.demo.repository.TeacherRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -36,8 +37,26 @@ public class QuestionService {
     private final QuestionRepository questionRepository;
     private final TeacherRepository teacherRepository;
 
-    // Usar caminho absoluto baseado no diretório do projeto
-    private final String IMAGE_UPLOAD_DIR = System.getProperty("user.dir") + File.separator + "uploads" + File.separator;
+    // Usar variável de ambiente UPLOAD_DIR ou fallback para diretório do projeto
+    @Value("${file.upload-dir:uploads}")
+    private String uploadDir;
+
+    // Método para obter o diretório base de uploads
+    private String getImageUploadDir() {
+        // Se uploadDir for relativo, usar baseado no diretório do projeto
+        // Se for absoluto, usar diretamente
+        String baseDir;
+        if (new File(uploadDir).isAbsolute()) {
+            baseDir = uploadDir;
+        } else {
+            baseDir = System.getProperty("user.dir") + File.separator + uploadDir;
+        }
+        // Garantir que termina com separador
+        if (!baseDir.endsWith(File.separator)) {
+            baseDir += File.separator;
+        }
+        return baseDir;
+    }
 
     /**
      * Criar várias questões em lote via JSON (batch).
@@ -327,37 +346,37 @@ public class QuestionService {
         String filename = System.currentTimeMillis() + "_" + originalFilename;
         
         // Criar diretório completo se não existir
-        File uploadDir = new File(IMAGE_UPLOAD_DIR + subDir);
-        log.info("🔍 DEBUG saveImage: Diretório de upload: {}", uploadDir.getAbsolutePath());
-        log.info("🔍 DEBUG saveImage: Diretório existe? {}", uploadDir.exists());
+        File uploadDirectory = new File(getImageUploadDir() + subDir);
+        log.info("🔍 DEBUG saveImage: Diretório de upload: {}", uploadDirectory.getAbsolutePath());
+        log.info("🔍 DEBUG saveImage: Diretório existe? {}", uploadDirectory.exists());
         
-        if (!uploadDir.exists()) {
-            boolean created = uploadDir.mkdirs();
+        if (!uploadDirectory.exists()) {
+            boolean created = uploadDirectory.mkdirs();
             log.info("🔍 DEBUG saveImage: Tentativa de criar diretório: {}", created);
-            if (!created && !uploadDir.exists()) {
-                log.error("❌ Erro ao criar diretório: {}", uploadDir.getAbsolutePath());
-                throw new IOException("Não foi possível criar o diretório: " + uploadDir.getAbsolutePath());
+            if (!created && !uploadDirectory.exists()) {
+                log.error("❌ Erro ao criar diretório: {}", uploadDirectory.getAbsolutePath());
+                throw new IOException("Não foi possível criar o diretório: " + uploadDirectory.getAbsolutePath());
             }
-            log.info("✅ Diretório criado: {}", uploadDir.getAbsolutePath());
+            log.info("✅ Diretório criado: {}", uploadDirectory.getAbsolutePath());
         }
         
-        File dest = new File(uploadDir, filename);
+        File dest = new File(uploadDirectory, filename);
         
-        // Verificar se o arquivo já existe e adicionar sufixo se necessário
-        int counter = 1;
-        String baseFilename = filename;
-        while (dest.exists()) {
-            int lastDot = baseFilename.lastIndexOf('.');
-            if (lastDot > 0) {
-                String nameWithoutExt = baseFilename.substring(0, lastDot);
-                String ext = baseFilename.substring(lastDot);
-                filename = nameWithoutExt + "_" + counter + ext;
-            } else {
-                filename = baseFilename + "_" + counter;
+            // Verificar se o arquivo já existe e adicionar sufixo se necessário
+            int counter = 1;
+            String baseFilename = filename;
+            while (dest.exists()) {
+                int lastDot = baseFilename.lastIndexOf('.');
+                if (lastDot > 0) {
+                    String nameWithoutExt = baseFilename.substring(0, lastDot);
+                    String ext = baseFilename.substring(lastDot);
+                    filename = nameWithoutExt + "_" + counter + ext;
+                } else {
+                    filename = baseFilename + "_" + counter;
+                }
+                dest = new File(uploadDirectory, filename);
+                counter++;
             }
-            dest = new File(uploadDir, filename);
-            counter++;
-        }
         
         log.info("🔍 DEBUG saveImage: Salvando arquivo em: {}", dest.getAbsolutePath());
         imageFile.transferTo(dest);
@@ -415,16 +434,16 @@ public class QuestionService {
             String filename = System.currentTimeMillis() + "_" + System.nanoTime() + "." + fileExtension;
             
             // Criar diretório completo se não existir
-            File uploadDir = new File(IMAGE_UPLOAD_DIR + subDir);
-            if (!uploadDir.exists()) {
-                boolean created = uploadDir.mkdirs();
-                if (!created && !uploadDir.exists()) {
-                    throw new IOException("Não foi possível criar o diretório: " + uploadDir.getAbsolutePath());
+            File uploadDirectory = new File(getImageUploadDir() + subDir);
+            if (!uploadDirectory.exists()) {
+                boolean created = uploadDirectory.mkdirs();
+                if (!created && !uploadDirectory.exists()) {
+                    throw new IOException("Não foi possível criar o diretório: " + uploadDirectory.getAbsolutePath());
                 }
-                log.info("✅ Diretório criado: {}", uploadDir.getAbsolutePath());
+                log.info("✅ Diretório criado: {}", uploadDirectory.getAbsolutePath());
             }
             
-            File dest = new File(uploadDir, filename);
+            File dest = new File(uploadDirectory, filename);
             
             // Verificar se o arquivo já existe e adicionar sufixo se necessário
             int counter = 1;
@@ -433,7 +452,7 @@ public class QuestionService {
                 String nameWithoutExt = originalFilename.substring(0, originalFilename.lastIndexOf('.'));
                 String ext = originalFilename.substring(originalFilename.lastIndexOf('.'));
                 filename = nameWithoutExt + "_" + counter + ext;
-                dest = new File(uploadDir, filename);
+                dest = new File(uploadDirectory, filename);
                 counter++;
             }
 

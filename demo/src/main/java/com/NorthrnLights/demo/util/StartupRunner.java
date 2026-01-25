@@ -5,12 +5,18 @@ import com.NorthrnLights.demo.domain.Teacher;
 import com.NorthrnLights.demo.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.annotation.Order;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 @Slf4j
 @Component
@@ -30,14 +36,56 @@ public class StartupRunner implements CommandLineRunner {
     private final TeacherRepository teacherRepository;
     private final JdbcTemplate jdbcTemplate;
 
+    @Value("${file.upload-dir:uploads}")
+    private String uploadDir;
+
     @Override
     public void run(String... args) {
         log.info("🚀 Iniciando StartupRunner...");
+
+        // Criar diretórios de upload
+        createUploadDirectories();
 
         // Criar Teacher padrão
         createDefaultTeacher();
 
         log.info("✅ StartupRunner concluído.");
+    }
+
+    private void createUploadDirectories() {
+        try {
+            // Determinar o diretório base
+            String baseDir;
+            if (new File(uploadDir).isAbsolute()) {
+                baseDir = uploadDir;
+            } else {
+                baseDir = System.getProperty("user.dir") + File.separator + uploadDir;
+            }
+
+            // Criar subdiretórios necessários
+            String[] subDirs = {
+                "questions",
+                "answers",
+                "corrections",
+                "exams",
+                "users"
+            };
+
+            for (String subDir : subDirs) {
+                Path dirPath = Paths.get(baseDir, subDir);
+                if (!Files.exists(dirPath)) {
+                    Files.createDirectories(dirPath);
+                    log.info("✅ Diretório criado: {}", dirPath.toAbsolutePath());
+                } else {
+                    log.debug("📁 Diretório já existe: {}", dirPath.toAbsolutePath());
+                }
+            }
+
+            log.info("✅ Todos os diretórios de upload verificados/criados com sucesso!");
+        } catch (Exception e) {
+            log.error("❌ Erro ao criar diretórios de upload: {}", e.getMessage(), e);
+            // Não lançar exceção para não impedir a inicialização da aplicação
+        }
     }
 
     private void createDefaultTeacher() {
