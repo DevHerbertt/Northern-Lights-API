@@ -48,7 +48,8 @@ public class JwtFilter extends OncePerRequestFilter {
         }
 
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            System.out.println("❌ DEBUG: No Authorization header or not Bearer token for: " + requestPath);
+            System.out.println("⚠️ DEBUG: No Authorization header or not Bearer token for: " + requestPath);
+            // Continuar a cadeia - o Spring Security vai retornar 401/403 se necessário
             filterChain.doFilter(request, response);
             return;
         }
@@ -120,10 +121,20 @@ public class JwtFilter extends OncePerRequestFilter {
                     }
                 }
             } else {
-                System.out.println("❌ DEBUG: User not found or token invalid");
+                System.out.println("❌ DEBUG: User not found or token invalid for: " + requestPath);
+                System.out.println("❌ DEBUG: Email from token: " + email);
+                if (email != null) {
+                    User userCheck = userRepository.findByEmail(email).orElse(null);
+                    if (userCheck == null) {
+                        System.out.println("❌ DEBUG: User não encontrado no banco de dados");
+                    } else {
+                        boolean tokenValid = jwtService.validateToken(token);
+                        System.out.println("❌ DEBUG: Token válido? " + tokenValid);
+                    }
+                }
             }
         } else {
-            System.out.println("ℹ️ DEBUG: Already authenticated or no email");
+            System.out.println("ℹ️ DEBUG: Already authenticated or no email for: " + requestPath);
         }
 
         filterChain.doFilter(request, response);
