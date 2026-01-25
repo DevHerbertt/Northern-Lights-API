@@ -25,7 +25,9 @@ spring:
     show-sql: ${SHOW_SQL:false}
     properties:
       hibernate:
-        dialect: ${HIBERNATE_DIALECT:org.hibernate.dialect.MySQLDialect}
+        # Dialect será detectado automaticamente pelo Hibernate baseado na URL do banco
+        # Se necessário, pode ser sobrescrito via HIBERNATE_DIALECT
+        dialect: ${HIBERNATE_DIALECT:}
         format_sql: false
         connection:
           characterEncoding: utf8
