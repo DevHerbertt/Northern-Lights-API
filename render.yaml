@@ -1,0 +1,42 @@
+services:
+  - type: web
+    name: northern-lights-api
+    env: java
+    rootDir: demo
+    buildCommand: ./mvnw clean package -DskipTests
+    startCommand: java -jar target/*.jar
+    plan: starter
+    envVars:
+      - key: PORT
+        value: 8080
+      - key: JAVA_VERSION
+        value: 21
+      - key: DDL_AUTO
+        value: update
+      - key: SHOW_SQL
+        value: false
+      - key: UPLOAD_DIR
+        value: uploads
+      - key: JWT_EXPIRATION
+        value: 86400000
+      - key: DATABASE_URL
+        fromDatabase:
+          name: northern-lights-db
+          property: connectionString
+      - key: DATABASE_USERNAME
+        fromDatabase:
+          name: northern-lights-db
+          property: username
+      - key: DATABASE_PASSWORD
+        fromDatabase:
+          name: northern-lights-db
+          property: password
+      - key: JWT_SECRET
+        generateValue: true
+
+databases:
+  - name: northern-lights-db
+    databaseName: northern_lights
+    user: northern_lights_user
+    plan: starter
+
