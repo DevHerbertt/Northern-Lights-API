@@ -75,13 +75,7 @@ public class JwtFilter extends OncePerRequestFilter {
             System.out.println("🔍 DEBUG: Email do token: " + email);
         }
 
-        if (email != null) {
-            // Verificar se já está autenticado, mas sempre validar o token se presente
-            Authentication existingAuth = SecurityContextHolder.getContext().getAuthentication();
-            if (existingAuth != null && existingAuth.isAuthenticated()) {
-                System.out.println("ℹ️ DEBUG: Já autenticado, mas validando token novamente para: " + requestPath);
-            }
-            
+        if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             User user = userRepository.findByEmail(email).orElse(null);
 
             if (user != null && jwtService.validateToken(token)) {
