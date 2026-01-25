@@ -39,12 +39,22 @@ public class DatabaseConfig {
             if (password == null || password.trim().isEmpty()) {
                 password = properties.getPassword();
             }
-            log.info("Usando configuração do application.yml (MySQL)");
+            log.info("Usando configuração do application.yml");
         } else {
             log.info("DATABASE_URL encontrada nas variáveis de ambiente");
         }
 
-        // Validar que temos uma URL válida
+        // Validar que temos uma URL válida - se não tiver, usar URL padrão do application.yml
+        if (url == null || url.trim().isEmpty()) {
+            log.warn("DATABASE_URL não encontrada, usando URL padrão do application.yml");
+            url = properties.getUrl() != null && !properties.getUrl().trim().isEmpty() 
+                ? properties.getUrl() 
+                : "jdbc:mysql://localhost:3306/northern_lights?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=America/Sao_Paulo";
+            username = properties.getUsername() != null ? properties.getUsername() : "root";
+            password = properties.getPassword() != null ? properties.getPassword() : "root";
+        }
+        
+        // Validação final - se ainda não tiver URL, lançar erro
         if (url == null || url.trim().isEmpty()) {
             log.error("Nenhuma URL de banco de dados encontrada! Verifique DATABASE_URL ou spring.datasource.url");
             throw new IllegalStateException("URL do banco de dados não configurada. Configure DATABASE_URL ou spring.datasource.url");
@@ -67,13 +77,24 @@ public class DatabaseConfig {
                     .build();
         }
         
-        // Se chegou aqui, é uma URL não reconhecida - usar properties como fallback
-        log.warn("URL não reconhecida, usando configuração padrão do application.yml");
+        // Se chegou aqui, é uma URL não reconhecida - usar diretamente com driver padrão
+        log.warn("URL não reconhecida, tentando usar diretamente: {}", url.substring(0, Math.min(50, url.length())));
+        String driverClass = properties.getDriverClassName();
+        if (driverClass == null || driverClass.trim().isEmpty()) {
+            // Tentar detectar driver pela URL
+            if (url.contains("mysql")) {
+                driverClass = "com.mysql.cj.jdbc.Driver";
+            } else if (url.contains("postgresql") || url.contains("postgres")) {
+                driverClass = "org.postgresql.Driver";
+            } else {
+                driverClass = "com.mysql.cj.jdbc.Driver"; // fallback
+            }
+        }
         return DataSourceBuilder.create()
-                .url(properties.getUrl())
-                .username(properties.getUsername())
-                .password(properties.getPassword())
-                .driverClassName(properties.getDriverClassName())
+                .url(url)
+                .username(username != null ? username : "root")
+                .password(password != null ? password : "root")
+                .driverClassName(driverClass)
                 .build();
     }
     
