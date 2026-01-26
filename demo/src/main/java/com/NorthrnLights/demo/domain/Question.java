@@ -1,6 +1,5 @@
 package com.NorthrnLights.demo.domain;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -23,14 +22,13 @@ public class Question {
     private Long id;
 
     private String title;
-    
-    @Lob
+
     @Column(columnDefinition = "TEXT")
     private String description;
-    
-    @Lob
+
     @Column(columnDefinition = "TEXT")
     private String portugueseTranslation; // Tradução/ajuda em português para o aluno
+
     private Boolean hasHelp; // Indica se a questão tem ajuda disponível
 
     private String imagePath;
@@ -56,10 +54,10 @@ public class Question {
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
-    
+
     @Column(name = "expires_at")
     private LocalDateTime expiresAt; // Data de expiração da questão (para correção automática)
-    
+
     @Column(name = "visible_at")
     private LocalDateTime visibleAt; // Data em que a questão ficará visível para os alunos
 
