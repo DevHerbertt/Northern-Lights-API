@@ -68,16 +68,16 @@ public class SecurityConfig {
                                     "/debug/**"
                             ).permitAll()
 
-                            // Endpoints de questões - apenas professores podem criar/editar
-                            // Regra específica para /questions/create primeiro (antes do wildcard)
+                            // Endpoints de questões:
+                            // - Professores continuam precisando de permissão para criar/editar/apagar
+                            // - Qualquer usuário (até não autenticado) pode visualizar lista/quantidade
                             .requestMatchers(HttpMethod.POST, "/questions/create").hasAnyRole("TEACHER")
                             .requestMatchers(HttpMethod.POST, "/questions/batch").hasAnyRole("TEACHER")
                             .requestMatchers(HttpMethod.POST, "/questions/**").hasAnyRole("TEACHER")
                             .requestMatchers(HttpMethod.PUT, "/questions/**").hasAnyRole("TEACHER")
                             .requestMatchers(HttpMethod.DELETE, "/questions/**").hasAnyRole("TEACHER")
-                            // Visualização de questões: qualquer usuário autenticado (teacher ou student)
-                            // Isso evita falsos 403 caso as roles não sejam mapeadas corretamente
-                            .requestMatchers(HttpMethod.GET, "/questions", "/questions/**").authenticated()
+                            .requestMatchers(HttpMethod.GET, "/questions/quantity").permitAll()
+                            .requestMatchers(HttpMethod.GET, "/questions", "/questions/**").permitAll()
 
                             // Endpoints de provas - professores podem tudo, estudantes podem visualizar
                             .requestMatchers(HttpMethod.POST, "/exams/**").hasAnyRole("TEACHER")
@@ -131,15 +131,15 @@ public class SecurityConfig {
                             .requestMatchers(HttpMethod.GET, "/meets", "/meets/**").hasAnyRole("TEACHER", "STUDENT")
 
                             // Endpoints de estudantes - apenas professores podem gerenciar
-                            // IMPORTANTE: Ordem específica antes de genérica
                             .requestMatchers(HttpMethod.DELETE, "/students/**").hasAnyRole("TEACHER")
                             .requestMatchers(HttpMethod.POST, "/students/**").hasAnyRole("TEACHER")
                             .requestMatchers(HttpMethod.PUT, "/students/**").hasAnyRole("TEACHER")
                             .requestMatchers(HttpMethod.GET, "/students/**").hasAnyRole("TEACHER", "STUDENT")
 
-                            // Endpoints de professores - apenas usuários com ROLE_TEACHER
-                            // Usar hasAuthority para garantir correspondência exata com ROLE_TEACHER
-                            .requestMatchers(HttpMethod.GET, "/teachers", "/teachers/**").hasAuthority("ROLE_TEACHER")
+                            // Endpoints de professores:
+                            // - Professores precisam de ROLE_TEACHER para criar/alterar/apagar
+                            // - Qualquer usuário autenticado pode listar/visualizar (para evitar 403 no dashboard)
+                            .requestMatchers(HttpMethod.GET, "/teachers", "/teachers/**").authenticated()
                             .requestMatchers(HttpMethod.POST, "/teachers", "/teachers/**").hasAuthority("ROLE_TEACHER")
                             .requestMatchers(HttpMethod.PUT, "/teachers/**").hasAuthority("ROLE_TEACHER")
                             .requestMatchers(HttpMethod.DELETE, "/teachers/**").hasAuthority("ROLE_TEACHER")
@@ -187,7 +187,15 @@ public class SecurityConfig {
 
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         // Permitir explicitamente o header Authorization (necessário para JWT)
-        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Requested-With", "Accept", "Origin", "Access-Control-Request-Method", "Access-Control-Request-Headers"));
+        configuration.setAllowedHeaders(Arrays.asList(
+                "Authorization",
+                "Content-Type",
+                "X-Requested-With",
+                "Accept",
+                "Origin",
+                "Access-Control-Request-Method",
+                "Access-Control-Request-Headers"
+        ));
         configuration.setExposedHeaders(Arrays.asList("Authorization", "Content-Type"));
         configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L);
@@ -208,6 +216,5 @@ public class SecurityConfig {
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
-
 
 }
