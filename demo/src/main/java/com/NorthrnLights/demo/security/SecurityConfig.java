@@ -75,8 +75,9 @@ public class SecurityConfig {
                             .requestMatchers(HttpMethod.POST, "/questions/**").hasAnyRole("TEACHER")
                             .requestMatchers(HttpMethod.PUT, "/questions/**").hasAnyRole("TEACHER")
                             .requestMatchers(HttpMethod.DELETE, "/questions/**").hasAnyRole("TEACHER")
-                            // Estudantes podem apenas visualizar questões
-                            .requestMatchers(HttpMethod.GET, "/questions", "/questions/**").hasAnyRole("TEACHER", "STUDENT")
+                            // Visualização de questões: qualquer usuário autenticado (teacher ou student)
+                            // Isso evita falsos 403 caso as roles não sejam mapeadas corretamente
+                            .requestMatchers(HttpMethod.GET, "/questions", "/questions/**").authenticated()
 
                             // Endpoints de provas - professores podem tudo, estudantes podem visualizar
                             .requestMatchers(HttpMethod.POST, "/exams/**").hasAnyRole("TEACHER")
@@ -136,11 +137,12 @@ public class SecurityConfig {
                             .requestMatchers(HttpMethod.PUT, "/students/**").hasAnyRole("TEACHER")
                             .requestMatchers(HttpMethod.GET, "/students/**").hasAnyRole("TEACHER", "STUDENT")
 
-                            // Endpoints de professores - apenas professores (especificar métodos explicitamente)
-                            .requestMatchers(HttpMethod.GET, "/teachers", "/teachers/**").hasAnyRole("TEACHER")
-                            .requestMatchers(HttpMethod.POST, "/teachers", "/teachers/**").hasAnyRole("TEACHER")
-                            .requestMatchers(HttpMethod.PUT, "/teachers/**").hasAnyRole("TEACHER")
-                            .requestMatchers(HttpMethod.DELETE, "/teachers/**").hasAnyRole("TEACHER")
+                            // Endpoints de professores - apenas usuários com ROLE_TEACHER
+                            // Usar hasAuthority para garantir correspondência exata com ROLE_TEACHER
+                            .requestMatchers(HttpMethod.GET, "/teachers", "/teachers/**").hasAuthority("ROLE_TEACHER")
+                            .requestMatchers(HttpMethod.POST, "/teachers", "/teachers/**").hasAuthority("ROLE_TEACHER")
+                            .requestMatchers(HttpMethod.PUT, "/teachers/**").hasAuthority("ROLE_TEACHER")
+                            .requestMatchers(HttpMethod.DELETE, "/teachers/**").hasAuthority("ROLE_TEACHER")
 
                             // Endpoints de email - apenas professores
                             .requestMatchers("/email/**").hasAnyRole("TEACHER")
