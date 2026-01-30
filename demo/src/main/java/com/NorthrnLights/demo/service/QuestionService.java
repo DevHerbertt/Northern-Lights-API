@@ -546,9 +546,21 @@ public class QuestionService {
             }
         }
         
+        // Filtrar questões com referências órfãs a Teachers (evita erro de serialização JSON)
+        // Se o Teacher for null ou tiver ID null, a questão será filtrada
+        List<Question> validQuestions = questions.stream()
+            .filter(q -> {
+                if (q.getTeacher() == null || q.getTeacher().getId() == null) {
+                    log.warn("⚠️ Questão {} tem referência inválida ao Teacher, removendo da lista", q.getId());
+                    return false;
+                }
+                return true;
+            })
+            .collect(java.util.stream.Collectors.toList());
+        
         // Filtrar questões que ainda não estão visíveis (apenas para estudantes)
         LocalDateTime now = LocalDateTime.now();
-        List<Question> visibleQuestions = questions.stream()
+        List<Question> visibleQuestions = validQuestions.stream()
             .filter(q -> {
                 if (q.getVisibleAt() == null) {
                     return true; // Sem data de visibilidade = visível imediatamente
@@ -562,7 +574,8 @@ public class QuestionService {
             })
             .collect(java.util.stream.Collectors.toList());
         
-        log.info("📊 Total de questões: {}, Questões visíveis: {}", questions.size(), visibleQuestions.size());
+        log.info("📊 Total de questões: {}, Questões válidas: {}, Questões visíveis: {}", 
+                questions.size(), validQuestions.size(), visibleQuestions.size());
         return visibleQuestions;
     }
 

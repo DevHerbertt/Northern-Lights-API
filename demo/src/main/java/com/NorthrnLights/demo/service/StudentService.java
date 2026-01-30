@@ -125,9 +125,18 @@ public class StudentService {
             log.warn("⚠️ Erro ao deletar respostas do estudante ID: {} - {}", id, e.getMessage());
         }
 
-        // Deletar o estudante
-        studentRepository.delete(student);
-        log.info("✅ Estudante ID: {} deletado com sucesso", id);
+        // Deletar o estudante usando deleteById para evitar problemas com referências em memória
+        // Com herança JOINED, isso deletará tanto o registro em 'student' quanto em 'users'
+        try {
+            studentRepository.deleteById(id);
+            log.info("✅ Estudante ID: {} deletado com sucesso", id);
+        } catch (Exception e) {
+            log.error("❌ Erro ao deletar estudante ID: {} - {}", id, e.getMessage(), e);
+            throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR, 
+                    "Erro ao excluir aluno: " + e.getMessage()
+            );
+        }
 
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
