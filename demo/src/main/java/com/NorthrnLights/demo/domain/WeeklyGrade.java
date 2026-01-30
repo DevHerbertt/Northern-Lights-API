@@ -28,18 +28,17 @@ public class WeeklyGrade {
     @Enumerated(EnumType.STRING)
     private Grade grade;
 
-    @Lob
     @Column(columnDefinition = "TEXT")
     private String feedback; // Feedback geral da semana
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "student_id")
-    @JsonIgnoreProperties({"answers", "weeklyGrades"})
+    @JsonIgnoreProperties({"answers", "weeklyGrades", "examGrades", "hibernateLazyInitializer", "handler"})
     private Student student;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "teacher_id")
-    @JsonIgnoreProperties({"questions", "meet", "createAt", "updateAt"})
+    @JsonIgnoreProperties({"questions", "meet", "createAt", "updateAt", "hibernateLazyInitializer", "handler"})
     private Teacher teacher;
 
     @Column(name = "week_start_date")
