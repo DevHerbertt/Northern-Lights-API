@@ -122,40 +122,14 @@ public class EmailService {
 
     @Async
     public CompletableFuture<Boolean> sendEmailUpdate(TeacherDTO teacherDTO) {
+        log.debug("=== INÍCIO sendEmailUpdate ===");
         String email = teacherDTO.getEmail();
-        if (email == null || email.trim().isEmpty() || !isValidEmail(email)) {
-            log.error("E-mail inválido: {}", email);
-            return CompletableFuture.completedFuture(false);
-        }
-
-        try {
-            // Criar e configurar o MimeMessage
-            MimeMessage mimeMessage = javaMailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, "UTF-8");
-
-            // Remetente
-            helper.setFrom(remetente);
-
-            // Destinatário
-            helper.setTo(email.trim());
-
-            // Assunto
-            helper.setSubject("Alterações na sua conta - Northern Lights");
-
-            // Corpo HTML
-            String htmlContent = buildEmailContent(teacherDTO);
-            helper.setText(htmlContent, true);
-
-            // Enviar
-            javaMailSender.send(mimeMessage);
-
-            log.info("E-mail enviado com sucesso para: {}", email);
-            return CompletableFuture.completedFuture(true);
-
-        } catch (MessagingException e) {
-            log.error("Erro ao enviar e-mail: {}", e.getMessage());
-            return CompletableFuture.completedFuture(false);
-        }
+        log.debug("DEBUG - Email recebido: {}", email);
+        
+        String assunto = "Alterações na sua conta - Northern Lights";
+        String htmlContent = buildEmailContent(teacherDTO);
+        
+        return sendEmailGeneric(email, assunto, htmlContent);
     }
 
     private String buildEmailContent(TeacherDTO teacherDTO) {
@@ -189,11 +163,17 @@ public class EmailService {
         log.debug("=== INÍCIO sendTestEmail ===");
         log.debug("DEBUG - Email de teste recebido: {}", testEmail);
         
+        if (testEmail == null || testEmail.trim().isEmpty() || !isValidEmail(testEmail)) {
+            log.error("E-mail de teste inválido: {}", testEmail);
+            return false;
+        }
+        
         String assunto = "Teste de E-mail - Northern Lights";
         String texto = "Este é um e-mail de teste. Se você recebeu isso, o serviço de e-mail está funcionando!";
         
         try {
-            return sendEmailGeneric(testEmail, assunto, texto).get();
+            CompletableFuture<Boolean> future = sendEmailGeneric(testEmail, assunto, texto);
+            return future.get();
         } catch (Exception e) {
             log.error("❌ Erro ao enviar email de teste: {}", e.getMessage());
             log.error("DEBUG - Stack trace completo:", e);
