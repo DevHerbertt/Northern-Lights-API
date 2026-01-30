@@ -29,7 +29,6 @@ public class Answer {
     @JsonIgnoreProperties({"options", "teacher", "exam"})
     private Question question;
 
-    @Lob
     @Column(columnDefinition = "TEXT")
     private String text;
 

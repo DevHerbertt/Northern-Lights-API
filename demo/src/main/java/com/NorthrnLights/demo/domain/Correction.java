@@ -18,7 +18,6 @@ public class Correction {
     @Enumerated(EnumType.STRING)
     private Grade grade;
 
-    @Lob
     @Column(columnDefinition = "TEXT")
     private String feedback; // Texto da correção
 

@@ -22,7 +22,6 @@ public class RecordedClass {
     @Column(nullable = false)
     private String title; // Título da aula gravada
 
-    @Lob
     @Column(columnDefinition = "TEXT")
     private String description; // Descrição opcional
 

@@ -28,7 +28,6 @@ public class ExamGrade {
     @Enumerated(EnumType.STRING)
     private Grade grade; // Classificação calculada (A+, B+, etc.)
 
-    @Lob
     @Column(columnDefinition = "TEXT")
     private String feedback; // Feedback do professor
 
