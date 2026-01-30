@@ -171,6 +171,11 @@ public class WeeklyGradeService {
             "<strong>💡 Continue assim!</strong> Seu esforço e dedicação são fundamentais para seu aprendizado." +
             "</p>" +
             "<p style='margin-top: 20px;'>Acesse sua área de estudante para ver mais detalhes sobre suas notas e correções.</p>" +
+            "<div style='text-align: center; margin: 30px 0;'>" +
+            "<a href='https://northern-lights-frontend-2i36.vercel.app/' style='display: inline-block; background: linear-gradient(135deg, #14b8a6, #3b82f6); color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold;' target='_blank'>" +
+            "🌐 Acessar Northern Lights" +
+            "</a>" +
+            "</div>" +
             "<p>Atenciosamente,<br><strong>Equipe Northern Lights</strong></p>" +
             "</div>" +
             "<div class='footer'>" +
@@ -184,7 +189,7 @@ public class WeeklyGradeService {
             weekInfo,
             feedback.isEmpty() ? "" : 
                 "<div class='feedback-box'>" +
-                "<h3 style='margin-top: 0; color: #8b5cf6;'>📝 Feedback do Professor:</h3>" +
+                "<h3 style='margin-top: 0; color: #8b5cf6;'>📝 Feedback FEITO PARA O PROFESSOR:</h3>" +
                 "<p>" + feedback + "</p>" +
                 "</div>"
         );
@@ -212,7 +217,33 @@ public class WeeklyGradeService {
     }
 
     public List<WeeklyGrade> getStudentWeeklyGrades(Long studentId) {
-        return weeklyGradeRepository.findByStudentIdOrderByWeekStartDateDesc(studentId);
+        log.info("🔍 DEBUG getStudentWeeklyGrades: Buscando notas semanais para estudante ID: {}", studentId);
+        
+        if (studentId == null) {
+            log.error("❌ getStudentWeeklyGrades: studentId é null");
+            throw new IllegalArgumentException("ID do estudante não pode ser null");
+        }
+        
+        try {
+            log.info("🔍 DEBUG getStudentWeeklyGrades: Verificando se estudante existe...");
+            boolean studentExists = studentRepository.existsById(studentId);
+            if (!studentExists) {
+                log.error("❌ getStudentWeeklyGrades: Estudante com ID {} não encontrado", studentId);
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Estudante não encontrado com ID: " + studentId);
+            }
+            
+            log.info("🔍 DEBUG getStudentWeeklyGrades: Estudante existe. Buscando notas semanais...");
+            List<WeeklyGrade> grades = weeklyGradeRepository.findByStudentIdOrderByWeekStartDateDesc(studentId);
+            log.info("✅ getStudentWeeklyGrades: Encontradas {} notas semanais para estudante ID: {}", grades.size(), studentId);
+            return grades;
+        } catch (ResponseStatusException e) {
+            log.error("❌ getStudentWeeklyGrades: ResponseStatusException para estudante ID: {}", studentId, e);
+            throw e;
+        } catch (Exception e) {
+            log.error("❌ getStudentWeeklyGrades: Erro inesperado ao buscar notas semanais para estudante ID: {}", studentId, e);
+            log.error("❌ getStudentWeeklyGrades: Stack trace completo:", e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Erro ao buscar notas semanais: " + e.getMessage());
+        }
     }
 
     public Optional<WeeklyGrade> getCurrentWeekGrade(Long studentId) {

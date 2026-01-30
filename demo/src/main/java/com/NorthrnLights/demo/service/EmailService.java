@@ -137,15 +137,44 @@ public class EmailService {
         String password = teacherDTO.getPassWord() != null ? teacherDTO.getPassWord() : "[senha não definida]";
 
         return String.format(
-                "<html><body>" +
-                        "<h2>Olá,Tudo bem ? %s!</h2>" +
-                        "<p>O administrador fez alterações em sua conta na <strong>NORTHERN LIGHTS</strong> as %s.</p>" +
-                        "<p><strong>Sua senha foi reiniciada:</strong> %s</p>" +
-                        "<p><em>Recomendamos que você mude esta senha após o primeiro login.</em></p>" +
-                        "<p><em>Link para acesso: </em></p>" +
-                        "<p>Atenciosamente,<br>Equipe Northern Lights</p>" +
-                        "</body></html>",
-                userName,LocalDateTime.now(), password
+                "<!DOCTYPE html>" +
+                "<html>" +
+                "<head>" +
+                "<meta charset='UTF-8'>" +
+                "<style>" +
+                "body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }" +
+                ".container { max-width: 600px; margin: 0 auto; padding: 20px; }" +
+                ".header { background: linear-gradient(135deg, #3b82f6, #8b5cf6); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }" +
+                ".content { background: #f8fafc; padding: 30px; border-radius: 0 0 10px 10px; }" +
+                ".button { display: inline-block; background: linear-gradient(135deg, #3b82f6, #8b5cf6); color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 20px 0; }" +
+                ".footer { text-align: center; margin-top: 30px; color: #94a3b8; font-size: 0.9rem; }" +
+                "</style>" +
+                "</head>" +
+                "<body>" +
+                "<div class='container'>" +
+                "<div class='header'>" +
+                "<h1>🌟 Northern Lights</h1>" +
+                "<p>Acesso à sua Conta</p>" +
+                "</div>" +
+                "<div class='content'>" +
+                "<h2>Olá, %s! 👋</h2>" +
+                "<p>O administrador fez alterações em sua conta na <strong>NORTHERN LIGHTS</strong> em %s.</p>" +
+                "<p><strong>Sua senha foi reiniciada:</strong> %s</p>" +
+                "<p><em>Recomendamos que você mude esta senha após o primeiro login.</em></p>" +
+                "<div style='text-align: center; margin: 30px 0;'>" +
+                "<a href='https://northern-lights-frontend-2i36.vercel.app/' class='button' target='_blank'>" +
+                "🌐 Acessar Northern Lights" +
+                "</a>" +
+                "</div>" +
+                "<p>Atenciosamente,<br><strong>Equipe Northern Lights</strong></p>" +
+                "</div>" +
+                "<div class='footer'>" +
+                "<p>Este é um e-mail automático, por favor não responda.</p>" +
+                "</div>" +
+                "</div>" +
+                "</body>" +
+                "</html>",
+                userName, LocalDateTime.now(), password
         );
     }
 
@@ -242,6 +271,11 @@ public class EmailService {
             "Após o término da aula, apenas a gravação estará disponível." +
             "</p>" +
             "<p style='margin-top: 20px;'>Não perca esta oportunidade de aprendizado!</p>" +
+            "<div style='text-align: center; margin: 30px 0;'>" +
+            "<a href='https://northern-lights-frontend-2i36.vercel.app/' style='display: inline-block; background: linear-gradient(135deg, #3b82f6, #8b5cf6); color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold;' target='_blank'>" +
+            "🌐 Acessar Northern Lights" +
+            "</a>" +
+            "</div>" +
             "<p>Atenciosamente,<br><strong>Equipe Northern Lights</strong></p>" +
             "</div>" +
             "<div class='footer'>" +

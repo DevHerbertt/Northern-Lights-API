@@ -166,6 +166,11 @@ public class ExamGradeService {
             "<strong>💡 Continue estudando!</strong> Seu esforço e dedicação são fundamentais para seu aprendizado." +
             "</p>" +
             "<p style='margin-top: 20px;'>Acesse sua área de estudante para ver mais detalhes sobre suas notas.</p>" +
+            "<div style='text-align: center; margin: 30px 0;'>" +
+            "<a href='https://northern-lights-frontend-2i36.vercel.app/' style='display: inline-block; background: linear-gradient(135deg, #3b82f6, #8b5cf6); color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold;' target='_blank'>" +
+            "🌐 Acessar Northern Lights" +
+            "</a>" +
+            "</div>" +
             "<p>Atenciosamente,<br><strong>Equipe Northern Lights</strong></p>" +
             "</div>" +
             "<div class='footer'>" +
@@ -179,7 +184,7 @@ public class ExamGradeService {
             examTitle,
             feedback.isEmpty() ? "" : 
                 "<div class='feedback-box'>" +
-                "<h3 style='margin-top: 0; color: #8b5cf6;'>📝 Feedback do Professor:</h3>" +
+                "<h3 style='margin-top: 0; color: #8b5cf6;'>📝 Feedback FEITO PARA O PROFESSOR:</h3>" +
                 "<p>" + feedback + "</p>" +
                 "</div>"
         );
