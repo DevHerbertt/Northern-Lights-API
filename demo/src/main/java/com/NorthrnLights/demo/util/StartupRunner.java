@@ -126,6 +126,13 @@ public class StartupRunner implements CommandLineRunner {
             String teacherPassword = "senhaForte123";
             String teacherName = "TEACHER DEFAULT";
             
+            // Verificar se o usuário já existe antes de criar
+            if (userRepository.findByEmail(teacherEmail).isPresent()) {
+                log.info("ℹ️ Teacher padrão já existe (email: {}). Pulando criação.", teacherEmail);
+                return;
+            }
+            
+            log.info("🔨 Criando Teacher padrão...");
             Teacher teacher = Teacher.builder()
                     .email(teacherEmail)
                     .password(passwordEncoder.encode(teacherPassword))
@@ -141,6 +148,9 @@ public class StartupRunner implements CommandLineRunner {
             log.info("🔑 Senha: {}", teacherPassword);
             log.info("👤 Nome: {}", teacherName);
             
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            // Se já existe (violação de constraint única), apenas logar
+            log.info("ℹ️ Teacher padrão já existe no banco de dados. Pulando criação.");
         } catch (Exception e) {
             log.error("❌ Erro ao criar Teacher padrão: {}", e.getMessage(), e);
         }
