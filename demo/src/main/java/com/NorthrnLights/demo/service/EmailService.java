@@ -10,6 +10,7 @@ import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
+import jakarta.annotation.PostConstruct;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 
@@ -24,43 +25,132 @@ public class EmailService {
     @Autowired
     private JavaMailSender javaMailSender;
 
-    @Value("${spring.mail.username}")
+    @Value("${spring.mail.username:}")
     private String remetente;
+
+    @Value("${spring.mail.host:}")
+    private String mailHost;
+
+    @Value("${spring.mail.port:}")
+    private String mailPort;
+
+    @Value("${spring.mail.password:}")
+    private String mailPassword;
+
+    @PostConstruct
+    public void init() {
+        log.info("=== INICIALIZANDO EmailService ===");
+        log.info("DEBUG - Remetente configurado: {}", remetente != null && !remetente.isEmpty() ? remetente : "NÃO CONFIGURADO");
+        log.info("DEBUG - Mail Host: {}", mailHost != null && !mailHost.isEmpty() ? mailHost : "NÃO CONFIGURADO");
+        log.info("DEBUG - Mail Port: {}", mailPort != null && !mailPort.isEmpty() ? mailPort : "NÃO CONFIGURADO");
+        
+        // Verificar senha sem expor o valor
+        if (mailPassword != null && !mailPassword.trim().isEmpty()) {
+            log.info("DEBUG - Mail Password configurado: SIM");
+            log.info("DEBUG - Mail Password tem espaços: {}", mailPassword.contains(" ") ? "SIM" : "NÃO");
+            log.info("DEBUG - Mail Password tamanho: {} caracteres", mailPassword.length());
+        } else {
+            log.error("DEBUG - Mail Password configurado: NÃO CONFIGURADO");
+        }
+        
+        log.info("DEBUG - JavaMailSender injetado: {}", javaMailSender != null ? "SIM" : "NÃO");
+        
+        if (javaMailSender == null) {
+            log.error("ERRO CRÍTICO: JavaMailSender não foi injetado! Verifique se spring-boot-starter-mail está no classpath.");
+        }
+        
+        if (remetente == null || remetente.trim().isEmpty()) {
+            log.error("ERRO CRÍTICO: Remetente não configurado! Verifique MAIL_USERNAME");
+        }
+        
+        if (mailPassword == null || mailPassword.trim().isEmpty()) {
+            log.error("ERRO CRÍTICO: Senha de email não configurada! Verifique MAIL_PASSWORD");
+        }
+        
+        // Verificar se todas as configurações estão presentes
+        boolean configOk = (remetente != null && !remetente.trim().isEmpty()) &&
+                          (mailPassword != null && !mailPassword.trim().isEmpty()) &&
+                          (mailHost != null && !mailHost.trim().isEmpty()) &&
+                          (mailPort != null && !mailPort.trim().isEmpty()) &&
+                          (javaMailSender != null);
+        
+        if (configOk) {
+            log.info("✅ Todas as configurações de email estão presentes!");
+        } else {
+            log.error("❌ Algumas configurações de email estão faltando!");
+        }
+        
+        log.info("=== EmailService inicializado ===");
+    }
 
     @Async
     public CompletableFuture<Boolean> sendEmailCreat(TeacherDTO teacherDTO) {
+        log.debug("=== INÍCIO sendEmailCreat ===");
         String email = teacherDTO.getEmail();
+        log.debug("DEBUG - Email recebido: {}", email);
+        
         if (email == null || email.trim().isEmpty() || !isValidEmail(email)) {
             log.error("E-mail inválido: {}", email);
             return CompletableFuture.completedFuture(false);
         }
 
+        if (javaMailSender == null) {
+            log.error("ERRO: JavaMailSender é null!");
+            return CompletableFuture.completedFuture(false);
+        }
+
+        if (remetente == null || remetente.trim().isEmpty()) {
+            log.error("ERRO: Remetente não configurado!");
+            return CompletableFuture.completedFuture(false);
+        }
+
         try {
+            log.debug("DEBUG - Criando MimeMessage...");
             // Criar e configurar o MimeMessage
             MimeMessage mimeMessage = javaMailSender.createMimeMessage();
+            log.debug("DEBUG - MimeMessage criado com sucesso");
+            
             MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, "UTF-8");
+            log.debug("DEBUG - MimeMessageHelper criado");
 
             // Remetente
+            log.debug("DEBUG - Configurando remetente: {}", remetente);
             helper.setFrom(remetente);
 
             // Destinatário
+            log.debug("DEBUG - Configurando destinatário: {}", email.trim());
             helper.setTo(email.trim());
 
             // Assunto
-            helper.setSubject("Acesso à sua conta como Professor - Northern Lights");
+            String assunto = "Acesso à sua conta como Professor - Northern Lights";
+            log.debug("DEBUG - Configurando assunto: {}", assunto);
+            helper.setSubject(assunto);
 
             // Corpo HTML
+            log.debug("DEBUG - Construindo conteúdo HTML...");
             String htmlContent = buildEmailContent(teacherDTO);
+            log.debug("DEBUG - Conteúdo HTML construído (tamanho: {} caracteres)", htmlContent.length());
             helper.setText(htmlContent, true);
 
             // Enviar
+            log.info("DEBUG - Tentando enviar email para: {}", email);
+            log.debug("DEBUG - Configurações: Host={}, Port={}, From={}", mailHost, mailPort, remetente);
             javaMailSender.send(mimeMessage);
-
-            log.info("E-mail enviado com sucesso para: {}", email);
+            log.info("✅ E-mail enviado com sucesso para: {}", email);
             return CompletableFuture.completedFuture(true);
 
         } catch (MessagingException e) {
-            log.error("Erro ao enviar e-mail: {}", e.getMessage());
+            log.error("❌ Erro MessagingException ao enviar e-mail para {}: {}", email, e.getMessage());
+            log.error("DEBUG - Stack trace completo:", e);
+            if (e.getCause() != null) {
+                log.error("DEBUG - Causa: {}", e.getCause().getMessage());
+                log.error("DEBUG - Stack trace da causa:", e.getCause());
+            }
+            return CompletableFuture.completedFuture(false);
+        } catch (Exception e) {
+            log.error("❌ Erro inesperado ao enviar e-mail para {}: {}", email, e.getMessage());
+            log.error("DEBUG - Tipo da exceção: {}", e.getClass().getName());
+            log.error("DEBUG - Stack trace completo:", e);
             return CompletableFuture.completedFuture(false);
         }
     }
@@ -131,55 +221,130 @@ public class EmailService {
 
     // Método para envio de e-mail de teste
     public boolean sendTestEmail(String testEmail) {
+        log.debug("=== INÍCIO sendTestEmail ===");
+        log.debug("DEBUG - Email de teste recebido: {}", testEmail);
+        
         if (testEmail == null || testEmail.trim().isEmpty() || !isValidEmail(testEmail)) {
             log.error("E-mail de teste inválido: {}", testEmail);
             return false;
         }
 
+        if (javaMailSender == null) {
+            log.error("ERRO: JavaMailSender é null!");
+            return false;
+        }
+
+        if (remetente == null || remetente.trim().isEmpty()) {
+            log.error("ERRO: Remetente não configurado!");
+            return false;
+        }
+
         try {
+            log.debug("DEBUG - Criando MimeMessage para teste...");
             MimeMessage mimeMessage = javaMailSender.createMimeMessage();
+            log.debug("DEBUG - MimeMessage criado");
+            
             MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, "UTF-8");
+            log.debug("DEBUG - MimeMessageHelper criado");
 
+            log.debug("DEBUG - Configurando remetente: {}", remetente);
             helper.setFrom(remetente);
+            
+            log.debug("DEBUG - Configurando destinatário: {}", testEmail.trim());
             helper.setTo(testEmail.trim());
-            helper.setSubject("Teste de E-mail - Northern Lights");
-            helper.setText("Este é um e-mail de teste. Se você recebeu isso, o serviço de e-mail está funcionando!", false);
+            
+            String assunto = "Teste de E-mail - Northern Lights";
+            log.debug("DEBUG - Configurando assunto: {}", assunto);
+            helper.setSubject(assunto);
+            
+            String texto = "Este é um e-mail de teste. Se você recebeu isso, o serviço de e-mail está funcionando!";
+            log.debug("DEBUG - Configurando texto (tamanho: {} caracteres)", texto.length());
+            helper.setText(texto, false);
 
+            log.info("DEBUG - Tentando enviar email de teste para: {}", testEmail);
+            log.debug("DEBUG - Configurações: Host={}, Port={}, From={}", mailHost, mailPort, remetente);
             javaMailSender.send(mimeMessage);
-            log.info("E-mail de teste enviado com sucesso!");
+            log.info("✅ E-mail de teste enviado com sucesso para: {}", testEmail);
             return true;
 
+        } catch (MessagingException e) {
+            log.error("❌ Erro MessagingException no envio do e-mail de teste para {}: {}", testEmail, e.getMessage());
+            log.error("DEBUG - Stack trace completo:", e);
+            if (e.getCause() != null) {
+                log.error("DEBUG - Causa: {}", e.getCause().getMessage());
+                log.error("DEBUG - Stack trace da causa:", e.getCause());
+            }
+            return false;
         } catch (Exception e) {
-            log.error("Erro no envio do e-mail de teste: {}", e.getMessage());
+            log.error("❌ Erro inesperado no envio do e-mail de teste para {}: {}", testEmail, e.getMessage());
+            log.error("DEBUG - Tipo da exceção: {}", e.getClass().getName());
+            log.error("DEBUG - Stack trace completo:", e);
             return false;
         }
     }
 
     @Async
     public CompletableFuture<Boolean> sendMeetEmail(MeetEmailDTO meetEmailDTO) {
+        log.debug("=== INÍCIO sendMeetEmail ===");
         String email = meetEmailDTO.getEmail();
+        log.debug("DEBUG - Email recebido: {}", email);
+        
         if (email == null || email.trim().isEmpty() || !isValidEmail(email)) {
             log.error("E-mail inválido: {}", email);
             return CompletableFuture.completedFuture(false);
         }
 
+        if (javaMailSender == null) {
+            log.error("ERRO: JavaMailSender é null!");
+            return CompletableFuture.completedFuture(false);
+        }
+
+        if (remetente == null || remetente.trim().isEmpty()) {
+            log.error("ERRO: Remetente não configurado!");
+            return CompletableFuture.completedFuture(false);
+        }
+
         try {
+            log.debug("DEBUG - Criando MimeMessage...");
             MimeMessage mimeMessage = javaMailSender.createMimeMessage();
+            log.debug("DEBUG - MimeMessage criado");
+            
             MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, "UTF-8");
+            log.debug("DEBUG - MimeMessageHelper criado");
 
+            log.debug("DEBUG - Configurando remetente: {}", remetente);
             helper.setFrom(remetente);
+            
+            log.debug("DEBUG - Configurando destinatário: {}", email.trim());
             helper.setTo(email.trim());
-            helper.setSubject("Nova Aula Disponível - Northern Lights");
+            
+            String assunto = "Nova Aula Disponível - Northern Lights";
+            log.debug("DEBUG - Configurando assunto: {}", assunto);
+            helper.setSubject(assunto);
 
+            log.debug("DEBUG - Construindo conteúdo HTML...");
             String htmlContent = buildMeetEmailContent(meetEmailDTO);
+            log.debug("DEBUG - Conteúdo HTML construído (tamanho: {} caracteres)", htmlContent.length());
             helper.setText(htmlContent, true);
 
+            log.info("DEBUG - Tentando enviar email de aula para: {}", email);
+            log.debug("DEBUG - Configurações: Host={}, Port={}, From={}", mailHost, mailPort, remetente);
             javaMailSender.send(mimeMessage);
-            log.info("E-mail de aula enviado com sucesso para: {}", email);
+            log.info("✅ E-mail de aula enviado com sucesso para: {}", email);
             return CompletableFuture.completedFuture(true);
 
         } catch (MessagingException e) {
-            log.error("Erro ao enviar e-mail de aula: {}", e.getMessage());
+            log.error("❌ Erro MessagingException ao enviar e-mail de aula para {}: {}", email, e.getMessage());
+            log.error("DEBUG - Stack trace completo:", e);
+            if (e.getCause() != null) {
+                log.error("DEBUG - Causa: {}", e.getCause().getMessage());
+                log.error("DEBUG - Stack trace da causa:", e.getCause());
+            }
+            return CompletableFuture.completedFuture(false);
+        } catch (Exception e) {
+            log.error("❌ Erro inesperado ao enviar e-mail de aula para {}: {}", email, e.getMessage());
+            log.error("DEBUG - Tipo da exceção: {}", e.getClass().getName());
+            log.error("DEBUG - Stack trace completo:", e);
             return CompletableFuture.completedFuture(false);
         }
     }
@@ -257,26 +422,63 @@ public class EmailService {
 
     @Async
     public CompletableFuture<Boolean> sendGradeEmail(String email, String subject, String htmlContent) {
+        log.debug("=== INÍCIO sendGradeEmail ===");
+        log.debug("DEBUG - Email recebido: {}", email);
+        log.debug("DEBUG - Assunto recebido: {}", subject);
+        
         if (email == null || email.trim().isEmpty() || !isValidEmail(email)) {
             log.error("E-mail inválido: {}", email);
             return CompletableFuture.completedFuture(false);
         }
 
-        try {
-            MimeMessage mimeMessage = javaMailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, "UTF-8");
+        if (javaMailSender == null) {
+            log.error("ERRO: JavaMailSender é null!");
+            return CompletableFuture.completedFuture(false);
+        }
 
+        if (remetente == null || remetente.trim().isEmpty()) {
+            log.error("ERRO: Remetente não configurado!");
+            return CompletableFuture.completedFuture(false);
+        }
+
+        try {
+            log.debug("DEBUG - Criando MimeMessage...");
+            MimeMessage mimeMessage = javaMailSender.createMimeMessage();
+            log.debug("DEBUG - MimeMessage criado");
+            
+            MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, "UTF-8");
+            log.debug("DEBUG - MimeMessageHelper criado");
+
+            log.debug("DEBUG - Configurando remetente: {}", remetente);
             helper.setFrom(remetente);
+            
+            log.debug("DEBUG - Configurando destinatário: {}", email.trim());
             helper.setTo(email.trim());
+            
+            log.debug("DEBUG - Configurando assunto: {}", subject);
             helper.setSubject(subject);
+            
+            log.debug("DEBUG - Configurando conteúdo HTML (tamanho: {} caracteres)", htmlContent != null ? htmlContent.length() : 0);
             helper.setText(htmlContent, true);
 
+            log.info("DEBUG - Tentando enviar email de nota para: {}", email);
+            log.debug("DEBUG - Configurações: Host={}, Port={}, From={}", mailHost, mailPort, remetente);
             javaMailSender.send(mimeMessage);
-            log.info("E-mail de nota enviado com sucesso para: {}", email);
+            log.info("✅ E-mail de nota enviado com sucesso para: {}", email);
             return CompletableFuture.completedFuture(true);
 
         } catch (MessagingException e) {
-            log.error("Erro ao enviar e-mail de nota: {}", e.getMessage());
+            log.error("❌ Erro MessagingException ao enviar e-mail de nota para {}: {}", email, e.getMessage());
+            log.error("DEBUG - Stack trace completo:", e);
+            if (e.getCause() != null) {
+                log.error("DEBUG - Causa: {}", e.getCause().getMessage());
+                log.error("DEBUG - Stack trace da causa:", e.getCause());
+            }
+            return CompletableFuture.completedFuture(false);
+        } catch (Exception e) {
+            log.error("❌ Erro inesperado ao enviar e-mail de nota para {}: {}", email, e.getMessage());
+            log.error("DEBUG - Tipo da exceção: {}", e.getClass().getName());
+            log.error("DEBUG - Stack trace completo:", e);
             return CompletableFuture.completedFuture(false);
         }
     }

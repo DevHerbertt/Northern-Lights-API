@@ -35,14 +35,25 @@ public class EmailController {
      */
     @PostMapping("/test")
     public ResponseEntity<?> sendTestEmail(@RequestParam String email) {
-        log.info("Enviando e-mail de teste para {}", email);
+        log.info("=== RECEBIDA REQUISIÇÃO: Enviar e-mail de teste ===");
+        log.info("DEBUG - Email de destino: {}", email);
+        log.info("DEBUG - Timestamp: {}", System.currentTimeMillis());
 
-        boolean result = emailService.sendTestEmail(email);
+        try {
+            boolean result = emailService.sendTestEmail(email);
+            log.info("DEBUG - Resultado do envio: {}", result ? "SUCESSO" : "FALHA");
 
-        if (result) {
-            return ResponseEntity.ok("E-mail de teste enviado com sucesso!");
-        } else {
-            return ResponseEntity.badRequest().body("Falha ao enviar e-mail de teste.");
+            if (result) {
+                log.info("✅ Resposta: E-mail de teste enviado com sucesso!");
+                return ResponseEntity.ok("E-mail de teste enviado com sucesso!");
+            } else {
+                log.error("❌ Resposta: Falha ao enviar e-mail de teste.");
+                return ResponseEntity.badRequest().body("Falha ao enviar e-mail de teste. Verifique os logs para mais detalhes.");
+            }
+        } catch (Exception e) {
+            log.error("❌ Exceção inesperada no controller ao enviar email de teste: {}", e.getMessage());
+            log.error("DEBUG - Stack trace:", e);
+            return ResponseEntity.internalServerError().body("Erro interno ao processar requisição de envio de email.");
         }
     }
 
