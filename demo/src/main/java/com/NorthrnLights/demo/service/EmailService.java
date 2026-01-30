@@ -196,21 +196,6 @@ public class EmailService {
             return sendEmailGeneric(testEmail, assunto, texto).get();
         } catch (Exception e) {
             log.error("❌ Erro ao enviar email de teste: {}", e.getMessage());
-            return false;
-        } testEmail);
-            return true;
-
-        } catch (MessagingException e) {
-            log.error("❌ Erro MessagingException no envio do e-mail de teste para {}: {}", testEmail, e.getMessage());
-            log.error("DEBUG - Stack trace completo:", e);
-            if (e.getCause() != null) {
-                log.error("DEBUG - Causa: {}", e.getCause().getMessage());
-                log.error("DEBUG - Stack trace da causa:", e.getCause());
-            }
-            return false;
-        } catch (Exception e) {
-            log.error("❌ Erro inesperado no envio do e-mail de teste para {}: {}", testEmail, e.getMessage());
-            log.error("DEBUG - Tipo da exceção: {}", e.getClass().getName());
             log.error("DEBUG - Stack trace completo:", e);
             return false;
         }
