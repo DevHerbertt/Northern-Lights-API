@@ -49,13 +49,20 @@ public class GradeCalculator {
      * Formata a nota no formato X/Y
      * @param pointsObtained Pontos obtidos
      * @param totalPoints Total de pontos
-     * @return String formatada "X/Y"
+     * @return String formatada "X/Y" (sem decimal se for inteiro)
      */
     public static String formatGradeAsFraction(Double pointsObtained, Double totalPoints) {
         if (pointsObtained == null || totalPoints == null) {
             return "0/0";
         }
-        return String.format("%.1f/%.1f", pointsObtained, totalPoints);
+        // Verificar se são números inteiros
+        boolean pointsIsInt = pointsObtained % 1 == 0;
+        boolean totalIsInt = totalPoints % 1 == 0;
+        
+        String pointsStr = pointsIsInt ? String.format("%.0f", pointsObtained) : String.format("%.1f", pointsObtained);
+        String totalStr = totalIsInt ? String.format("%.0f", totalPoints) : String.format("%.1f", totalPoints);
+        
+        return String.format("%s/%s", pointsStr, totalStr);
     }
 
     /**

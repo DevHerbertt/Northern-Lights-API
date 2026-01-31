@@ -10,8 +10,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 
 @RestController
 public class FileController {
@@ -43,58 +41,70 @@ public class FileController {
                 System.out.println("⚠️ DEBUG FileController - Erro ao decodificar URL: " + e.getMessage());
             }
             
-            // Usar caminho absoluto baseado no diretório do projeto
-            String projectDir = System.getProperty("user.dir");
-            Path file = Paths.get(projectDir, filePath);
-            Resource resource = new FileSystemResource(file.toFile());
+            // Tentar primeiro com user.dir (normalmente /app no Render)
+            String userDir = System.getProperty("user.dir");
+            java.io.File file1 = new java.io.File(userDir, filePath);
+            Resource resource = null;
             
-            // Se não encontrar, tentar caminhos alternativos
-            if (!resource.exists()) {
-                // Tentar com caminho absoluto
-                java.io.File absoluteFile = file.toAbsolutePath().toFile();
-                if (absoluteFile.exists()) {
-                    resource = new FileSystemResource(absoluteFile);
+            if (file1.exists() && file1.isFile()) {
+                resource = new FileSystemResource(file1);
+            } else {
+                // Tentar com /tmp como fallback
+                java.io.File file2 = new java.io.File("/tmp", filePath);
+                if (file2.exists() && file2.isFile()) {
+                    resource = new FileSystemResource(file2);
                 } else {
-                    // Tentar sem decodificação (caso o arquivo tenha sido salvo com encoding diferente)
-                    String originalPath = requestPath.startsWith("/") 
-                        ? requestPath.substring(1) 
-                        : requestPath;
-                    java.io.File originalFile = new java.io.File(originalPath);
-                    if (originalFile.exists()) {
-                        resource = new FileSystemResource(originalFile);
-                    } else {
-                        // Log para debug
-                        System.out.println("❌ DEBUG FileController - Arquivo não encontrado:");
-                        System.out.println("   Request URI: " + request.getRequestURI());
-                        System.out.println("   File Path (decoded): " + filePath);
-                        System.out.println("   Absolute Path: " + file.toAbsolutePath());
-                        
-                        // Tentar listar o diretório para debug
-                        Path parentDir = file.getParent();
-                        if (parentDir != null && parentDir.toFile().exists()) {
-                            System.out.println("   Parent directory exists: " + parentDir.toAbsolutePath());
-                            java.io.File[] files = parentDir.toFile().listFiles();
-                            if (files != null) {
-                                System.out.println("   Files in directory:");
-                                for (java.io.File f : files) {
-                                    System.out.println("     - " + f.getName());
-                                }
+                    // Log para debug
+                    System.out.println("❌ DEBUG FileController - Arquivo não encontrado:");
+                    System.out.println("   Request URI: " + request.getRequestURI());
+                    System.out.println("   File Path (decoded): " + filePath);
+                    System.out.println("   Tentado em: " + file1.getAbsolutePath());
+                    System.out.println("   Tentado em: " + file2.getAbsolutePath());
+                    
+                    // Tentar listar o diretório para debug
+                    java.io.File parentDir1 = file1.getParentFile();
+                    if (parentDir1 != null && parentDir1.exists()) {
+                        System.out.println("   Parent directory 1 exists: " + parentDir1.getAbsolutePath());
+                        java.io.File[] files = parentDir1.listFiles();
+                        if (files != null) {
+                            System.out.println("   Files in directory 1:");
+                            for (java.io.File f : files) {
+                                System.out.println("     - " + f.getName());
+                            }
+                        }
+                    }
+                    
+                    java.io.File parentDir2 = file2.getParentFile();
+                    if (parentDir2 != null && parentDir2.exists()) {
+                        System.out.println("   Parent directory 2 exists: " + parentDir2.getAbsolutePath());
+                        java.io.File[] files = parentDir2.listFiles();
+                        if (files != null) {
+                            System.out.println("   Files in directory 2:");
+                            for (java.io.File f : files) {
+                                System.out.println("     - " + f.getName());
                             }
                         }
                     }
                 }
             }
 
-            if (!resource.exists() || !resource.isReadable()) {
+            if (resource == null || !resource.exists() || !resource.isReadable()) {
                 return ResponseEntity.notFound().build();
             }
 
             // Determinar o tipo de conteúdo
             String contentType = determineContentType(filePath);
+            
+            // Obter o nome do arquivo do resource
+            String filename = resource.getFilename();
+            if (filename == null) {
+                // Extrair do caminho se não disponível
+                filename = filePath.substring(filePath.lastIndexOf('/') + 1);
+            }
 
             return ResponseEntity.ok()
                     .contentType(MediaType.parseMediaType(contentType))
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + file.getFileName() + "\"")
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + filename + "\"")
                     .body(resource);
         } catch (Exception e) {
             return ResponseEntity.notFound().build();

@@ -80,6 +80,39 @@ public class QuestionService {
     }
 
     /**
+     * Resolve o caminho relativo da imagem para o caminho absoluto correto.
+     * Verifica tanto /app/uploads quanto /tmp/uploads.
+     * @param relativePath Caminho relativo (ex: "/uploads/questions/file.png")
+     * @return File apontando para o arquivo se existir, null caso contrário
+     */
+    private File resolveImagePath(String relativePath) {
+        if (relativePath == null || relativePath.trim().isEmpty()) {
+            return null;
+        }
+        
+        // Remover barra inicial se houver
+        String pathWithoutSlash = relativePath.startsWith("/") 
+            ? relativePath.substring(1) 
+            : relativePath;
+        
+        // Tentar primeiro com user.dir (normalmente /app no Render)
+        String userDir = System.getProperty("user.dir");
+        File file1 = new File(userDir, pathWithoutSlash);
+        if (file1.exists() && file1.isFile()) {
+            return file1;
+        }
+        
+        // Tentar com /tmp como fallback
+        File file2 = new File("/tmp", pathWithoutSlash);
+        if (file2.exists() && file2.isFile()) {
+            return file2;
+        }
+        
+        // Se não encontrou em nenhum lugar, retornar null
+        return null;
+    }
+
+    /**
      * Criar várias questões em lote via JSON (batch).
      * Aceita imagens como base64 String.
      * 
@@ -631,8 +664,8 @@ public class QuestionService {
         // Validar e limpar imagePath se o arquivo não existir
         for (Question q : questions) {
             if (q.getImagePath() != null && !q.getImagePath().trim().isEmpty()) {
-                java.io.File imageFile = new java.io.File(q.getImagePath());
-                if (!imageFile.exists()) {
+                File imageFile = resolveImagePath(q.getImagePath());
+                if (imageFile == null) {
                     log.warn("Imagem não encontrada para questão {}: {}", q.getId(), q.getImagePath());
                     q.setImagePath(null); // Limpar imagePath se arquivo não existir
                 }
