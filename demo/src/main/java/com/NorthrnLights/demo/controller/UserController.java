@@ -7,6 +7,7 @@ import com.NorthrnLights.demo.repository.StudentRepository;
 import com.NorthrnLights.demo.repository.TeacherRepository;
 import com.NorthrnLights.demo.service.StudentService;
 import com.NorthrnLights.demo.service.TeacherService;
+import com.NorthrnLights.demo.util.UploadDirectoryManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -36,6 +37,7 @@ public class UserController {
     private final StudentRepository studentRepository;
     private final TeacherRepository teacherRepository;
     private final PasswordEncoder passwordEncoder;
+    private final UploadDirectoryManager uploadDirectoryManager;
 
     @PutMapping(value = "/{id}", consumes = {"multipart/form-data"})
     public ResponseEntity<?> updateProfile(
@@ -159,12 +161,9 @@ public class UserController {
             throw new IllegalArgumentException("Imagem deve ter no máximo 5MB");
         }
         
-        // Criar diretório se não existir
-        String uploadDir = System.getProperty("user.dir") + File.separator + "uploads" + File.separator + "profiles";
+        // Obter diretório usando o gerenciador centralizado
+        String uploadDir = uploadDirectoryManager.getUploadDir("profiles");
         Path uploadPath = Paths.get(uploadDir);
-        if (!Files.exists(uploadPath)) {
-            Files.createDirectories(uploadPath);
-        }
         
         // Gerar nome único para o arquivo
         String originalFilename = file.getOriginalFilename();
@@ -179,8 +178,9 @@ public class UserController {
         Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
         
         // Retornar caminho relativo
-        String relativePath = "uploads/profiles/" + filename;
-        log.info("✅ Imagem de perfil salva: {}", relativePath);
+        String relativePath = "/uploads/profiles/" + filename;
+        log.info("✅ Imagem de perfil salva: {}", filePath.toAbsolutePath());
+        log.info("🔍 Caminho relativo: {}", relativePath);
         return relativePath;
     }
 }

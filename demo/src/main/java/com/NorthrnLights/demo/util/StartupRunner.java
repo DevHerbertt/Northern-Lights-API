@@ -36,8 +36,7 @@ public class StartupRunner implements CommandLineRunner {
     private final TeacherRepository teacherRepository;
     private final JdbcTemplate jdbcTemplate;
 
-    @Value("${file.upload-dir:uploads}")
-    private String uploadDir;
+    private final UploadDirectoryManager uploadDirectoryManager;
 
     @Override
     public void run(String... args) {
@@ -54,30 +53,18 @@ public class StartupRunner implements CommandLineRunner {
 
     private void createUploadDirectories() {
         try {
-            // Determinar o diretório base
-            String baseDir;
-            if (new File(uploadDir).isAbsolute()) {
-                baseDir = uploadDir;
-            } else {
-                String userDir = System.getProperty("user.dir");
-                baseDir = userDir + File.separator + uploadDir;
-                
-                // Verificar se podemos escrever no diretório
-                File testDir = new File(baseDir);
-                if (!testDir.exists()) {
-                    File parentDir = testDir.getParentFile();
-                    if (parentDir != null && !parentDir.canWrite()) {
-                        // Se não puder escrever, usar /tmp como fallback
-                        log.warn("⚠️ Não é possível escrever em {}. Usando /tmp como fallback.", baseDir);
-                        baseDir = "/tmp" + File.separator + uploadDir;
-                    }
-                } else if (!testDir.canWrite()) {
-                    log.warn("⚠️ Não é possível escrever em {}. Usando /tmp como fallback.", baseDir);
-                    baseDir = "/tmp" + File.separator + uploadDir;
-                }
-            }
-
+            // Usar o gerenciador centralizado para obter o diretório base
+            String baseDir = uploadDirectoryManager.getBaseUploadDir();
             log.info("📁 Diretório base de uploads: {}", baseDir);
+
+            // Verificar se está usando diretório persistente
+            if (uploadDirectoryManager.isUsingPersistentDirectory()) {
+                log.info("✅ Usando diretório PERSISTENTE - arquivos serão mantidos após deploys!");
+            } else {
+                log.error("❌❌❌ ATENÇÃO: Usando diretório TEMPORÁRIO (/tmp)!");
+                log.error("❌❌❌ Arquivos serão PERDIDOS em reinicializações!");
+                log.error("❌❌❌ Configure permissões para /app/uploads para persistência!");
+            }
 
             // Criar subdiretórios necessários
             String[] subDirs = {
@@ -85,29 +72,13 @@ public class StartupRunner implements CommandLineRunner {
                 "answers",
                 "corrections",
                 "exams",
-                "users"
+                "profiles"
             };
 
             for (String subDir : subDirs) {
-                Path dirPath = Paths.get(baseDir, subDir);
                 try {
-                    if (!Files.exists(dirPath)) {
-                        Files.createDirectories(dirPath);
-                        log.info("✅ Diretório criado: {}", dirPath.toAbsolutePath());
-                        
-                        // Verificar se realmente foi criado e tem permissões
-                        if (Files.exists(dirPath) && Files.isWritable(dirPath)) {
-                            log.info("✅ Permissões verificadas para: {}", dirPath.toAbsolutePath());
-                        } else {
-                            log.error("❌ Diretório criado mas sem permissões de escrita: {}", dirPath.toAbsolutePath());
-                        }
-                    } else {
-                        if (Files.isWritable(dirPath)) {
-                            log.debug("📁 Diretório já existe e tem permissões: {}", dirPath.toAbsolutePath());
-                        } else {
-                            log.warn("⚠️ Diretório existe mas sem permissões de escrita: {}", dirPath.toAbsolutePath());
-                        }
-                    }
+                    String fullDir = uploadDirectoryManager.getUploadDir(subDir);
+                    log.info("✅ Diretório verificado/criado: {}", fullDir);
                 } catch (Exception e) {
                     log.error("❌ Erro ao criar diretório {}: {}", subDir, e.getMessage(), e);
                 }

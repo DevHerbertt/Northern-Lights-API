@@ -8,6 +8,7 @@ import com.NorthrnLights.demo.dto.QuestionBatchDTO;
 import com.NorthrnLights.demo.dto.QuestionDTO;
 import com.NorthrnLights.demo.repository.QuestionRepository;
 import com.NorthrnLights.demo.repository.TeacherRepository;
+import com.NorthrnLights.demo.util.UploadDirectoryManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Value;
@@ -36,52 +37,11 @@ public class QuestionService {
 
     private final QuestionRepository questionRepository;
     private final TeacherRepository teacherRepository;
-
-    // Usar variável de ambiente UPLOAD_DIR ou fallback para diretório do projeto
-    @Value("${file.upload-dir:uploads}")
-    private String uploadDir;
-
-    // Método para obter o diretório base de uploads
-    private String getImageUploadDir() {
-        String baseDir;
-        
-        // Se uploadDir for absoluto, usar diretamente
-        if (new File(uploadDir).isAbsolute()) {
-            baseDir = uploadDir;
-        } else {
-            // Tentar usar user.dir primeiro
-            String userDir = System.getProperty("user.dir");
-            baseDir = userDir + File.separator + uploadDir;
-            
-            // Verificar se podemos escrever no diretório
-            File testDir = new File(baseDir);
-            if (!testDir.exists()) {
-                // Tentar criar o diretório pai para verificar permissões
-                File parentDir = testDir.getParentFile();
-                if (parentDir != null && !parentDir.canWrite()) {
-                    // Se não puder escrever em user.dir, usar /tmp como fallback
-                    log.warn("⚠️ Não é possível escrever em {}. Usando /tmp como fallback.", baseDir);
-                    baseDir = "/tmp" + File.separator + uploadDir;
-                }
-            } else if (!testDir.canWrite()) {
-                // Se o diretório existe mas não podemos escrever, usar /tmp
-                log.warn("⚠️ Não é possível escrever em {}. Usando /tmp como fallback.", baseDir);
-                baseDir = "/tmp" + File.separator + uploadDir;
-            }
-        }
-        
-        // Garantir que termina com separador
-        if (!baseDir.endsWith(File.separator)) {
-            baseDir += File.separator;
-        }
-        
-        log.debug("🔍 Diretório de upload determinado: {}", baseDir);
-        return baseDir;
-    }
+    private final UploadDirectoryManager uploadDirectoryManager;
 
     /**
      * Resolve o caminho relativo da imagem para o caminho absoluto correto.
-     * Verifica tanto /app/uploads quanto /tmp/uploads.
+     * Usa o gerenciador centralizado para encontrar o arquivo.
      * @param relativePath Caminho relativo (ex: "/uploads/questions/file.png")
      * @return File apontando para o arquivo se existir, null caso contrário
      */
@@ -90,25 +50,25 @@ public class QuestionService {
             return null;
         }
         
-        // Remover barra inicial se houver
+        // Remover barra inicial e prefixo "uploads/" se houver
         String pathWithoutSlash = relativePath.startsWith("/") 
             ? relativePath.substring(1) 
             : relativePath;
         
-        // Tentar primeiro com user.dir (normalmente /app no Render)
-        String userDir = System.getProperty("user.dir");
-        File file1 = new File(userDir, pathWithoutSlash);
-        if (file1.exists() && file1.isFile()) {
-            return file1;
+        // Remover prefixo "uploads/" se presente
+        if (pathWithoutSlash.startsWith("uploads/")) {
+            pathWithoutSlash = pathWithoutSlash.substring("uploads/".length());
         }
         
-        // Tentar com /tmp como fallback
-        File file2 = new File("/tmp", pathWithoutSlash);
-        if (file2.exists() && file2.isFile()) {
-            return file2;
+        // Obter diretório base do gerenciador
+        String baseDir = uploadDirectoryManager.getBaseUploadDir();
+        File file = new File(baseDir, pathWithoutSlash);
+        
+        if (file.exists() && file.isFile()) {
+            return file;
         }
         
-        // Se não encontrou em nenhum lugar, retornar null
+        // Se não encontrou, retornar null
         return null;
     }
 
@@ -391,8 +351,9 @@ public class QuestionService {
         log.info("🔍 DEBUG saveImage: Nome original: {}", imageFile.getOriginalFilename());
         log.info("🔍 DEBUG saveImage: Tamanho: {} bytes", imageFile.getSize());
         
-        // Salvar em subdiretório específico para questões
-        String subDir = "questions" + File.separator;
+        // Obter diretório usando o gerenciador centralizado
+        String uploadDir = uploadDirectoryManager.getUploadDir("questions");
+        
         String originalFilename = imageFile.getOriginalFilename();
         if (originalFilename == null || originalFilename.trim().isEmpty()) {
             originalFilename = "image.png";
@@ -400,7 +361,7 @@ public class QuestionService {
         String filename = System.currentTimeMillis() + "_" + originalFilename;
         
         // Criar diretório completo se não existir
-        File uploadDirectory = new File(getImageUploadDir() + subDir);
+        File uploadDirectory = new File(uploadDir);
         log.info("🔍 DEBUG saveImage: Diretório de upload: {}", uploadDirectory.getAbsolutePath());
         log.info("🔍 DEBUG saveImage: Diretório existe? {}", uploadDirectory.exists());
         log.info("🔍 DEBUG saveImage: Diretório pai pode escrever? {}", uploadDirectory.getParentFile() != null ? uploadDirectory.getParentFile().canWrite() : "N/A");
@@ -505,12 +466,14 @@ public class QuestionService {
                 throw new IOException("Imagem muito grande. Tamanho máximo: 12MB");
             }
 
+            // Obter diretório usando o gerenciador centralizado
+            String uploadDir = uploadDirectoryManager.getUploadDir("questions");
+            
             // Criar nome do arquivo
-            String subDir = "questions" + File.separator;
             String filename = System.currentTimeMillis() + "_" + System.nanoTime() + "." + fileExtension;
             
             // Criar diretório completo se não existir
-            File uploadDirectory = new File(getImageUploadDir() + subDir);
+            File uploadDirectory = new File(uploadDir);
             if (!uploadDirectory.exists()) {
                 // Tentar criar o diretório pai primeiro se necessário
                 File parentDir = uploadDirectory.getParentFile();

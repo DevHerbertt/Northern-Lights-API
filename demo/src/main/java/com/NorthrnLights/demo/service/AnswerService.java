@@ -26,6 +26,7 @@ public class AnswerService {
     private final AnswerRepository answerRepository;
     private final QuestionRepository questionRepository;
     private final StudentRepository studentRepository;
+    private final com.NorthrnLights.demo.util.UploadDirectoryManager uploadDirectoryManager;
 
     // Cria uma nova resposta
     public Answer createAnswer(String text, Long questionId, Long studentId, MultipartFile imageFile) throws IOException {
@@ -74,15 +75,30 @@ public class AnswerService {
 
         // Se houver imagem, salvar no sistema de arquivos
         if (imageFile != null && !imageFile.isEmpty()) {
-            String projectDir = System.getProperty("user.dir");
-            String folder = "uploads" + java.io.File.separator + "answers" + java.io.File.separator;
-            String fileName = System.currentTimeMillis() + "_" + imageFile.getOriginalFilename();
-            Path path = Paths.get(projectDir, folder, fileName);
-            Files.createDirectories(path.getParent());  // Cria o diretório, se não existir
-            Files.copy(imageFile.getInputStream(), path); // Salva o arquivo no caminho
-            // Retornar caminho relativo para servir via FileController
-            answer.setImagePath("/uploads/answers/" + fileName);
-            log.info("✅ Imagem de resposta salva: {}", path.toAbsolutePath());
+            String uploadDir = uploadDirectoryManager.getUploadDir("answers");
+            
+            // Tratar nome do arquivo original (pode ter caracteres especiais ou espaços)
+            String originalFilename = imageFile.getOriginalFilename();
+            if (originalFilename == null || originalFilename.trim().isEmpty()) {
+                originalFilename = "image.png";
+            }
+            // Remover caracteres problemáticos e espaços do nome do arquivo
+            String sanitizedFilename = originalFilename.replaceAll("[^a-zA-Z0-9._-]", "_");
+            String fileName = System.currentTimeMillis() + "_" + sanitizedFilename;
+            
+            Path path = Paths.get(uploadDir, fileName);
+            
+            try {
+                Files.createDirectories(path.getParent());  // Cria o diretório, se não existir
+                Files.copy(imageFile.getInputStream(), path); // Salva o arquivo no caminho
+                // Retornar caminho relativo para servir via FileController
+                answer.setImagePath("/uploads/answers/" + fileName);
+                log.info("✅ Imagem de resposta salva: {}", path.toAbsolutePath());
+                log.info("🔍 Caminho relativo: {}", answer.getImagePath());
+            } catch (IOException e) {
+                log.error("❌ Erro ao salvar imagem de resposta: {}", e.getMessage(), e);
+                throw new IOException("Erro ao salvar imagem: " + e.getMessage(), e);
+            }
         }
 
         return answerRepository.save(answer);  // Salva a resposta no banco de dados
@@ -97,15 +113,30 @@ public class AnswerService {
 
         // Se houver imagem, salva no sistema de arquivos
         if (imageFile != null && !imageFile.isEmpty()) {
-            String projectDir = System.getProperty("user.dir");
-            String folder = "uploads" + java.io.File.separator + "answers" + java.io.File.separator;
-            String fileName = System.currentTimeMillis() + "_" + imageFile.getOriginalFilename();
-            Path path = Paths.get(projectDir, folder, fileName);
-            Files.createDirectories(path.getParent());  // Cria o diretório, se não existir
-            Files.copy(imageFile.getInputStream(), path); // Salva o arquivo no caminho
-            // Retornar caminho relativo para servir via FileController
-            answer.setImagePath("/uploads/answers/" + fileName);
-            log.info("✅ Imagem de resposta atualizada: {}", path.toAbsolutePath());
+            String uploadDir = uploadDirectoryManager.getUploadDir("answers");
+            
+            // Tratar nome do arquivo original (pode ter caracteres especiais ou espaços)
+            String originalFilename = imageFile.getOriginalFilename();
+            if (originalFilename == null || originalFilename.trim().isEmpty()) {
+                originalFilename = "image.png";
+            }
+            // Remover caracteres problemáticos e espaços do nome do arquivo
+            String sanitizedFilename = originalFilename.replaceAll("[^a-zA-Z0-9._-]", "_");
+            String fileName = System.currentTimeMillis() + "_" + sanitizedFilename;
+            
+            Path path = Paths.get(uploadDir, fileName);
+            
+            try {
+                Files.createDirectories(path.getParent());  // Cria o diretório, se não existir
+                Files.copy(imageFile.getInputStream(), path); // Salva o arquivo no caminho
+                // Retornar caminho relativo para servir via FileController
+                answer.setImagePath("/uploads/answers/" + fileName);
+                log.info("✅ Imagem de resposta atualizada: {}", path.toAbsolutePath());
+                log.info("🔍 Caminho relativo: {}", answer.getImagePath());
+            } catch (IOException e) {
+                log.error("❌ Erro ao atualizar imagem de resposta: {}", e.getMessage(), e);
+                throw new IOException("Erro ao salvar imagem: " + e.getMessage(), e);
+            }
         }
 
         return answerRepository.save(answer); // Salva a resposta atualizada
