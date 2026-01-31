@@ -34,39 +34,97 @@ public class UploadDirectoryManager {
         String userDir = System.getProperty("user.dir");
         String primaryDir = userDir + File.separator + "uploads";
 
+        log.info("📁 Tentando configurar diretório de upload em: {}", primaryDir);
+        log.info("📁 user.dir = {}", userDir);
+
         // Tentar criar e usar o diretório primário (/app/uploads)
         try {
             Path primaryPath = Paths.get(primaryDir);
             
+            // Verificar se o diretório pai existe e tem permissões
+            Path parentPath = primaryPath.getParent();
+            if (parentPath != null) {
+                File parentFile = parentPath.toFile();
+                log.info("📁 Diretório pai: {} - Existe: {} - Pode escrever: {}", 
+                    parentPath.toAbsolutePath(), parentFile.exists(), parentFile.canWrite());
+            }
+            
             // Tentar criar o diretório se não existir
             if (!Files.exists(primaryPath)) {
-                log.info("📁 Tentando criar diretório de upload: {}", primaryPath.toAbsolutePath());
-                Files.createDirectories(primaryPath);
+                log.info("📁 Criando diretório de upload: {}", primaryPath.toAbsolutePath());
+                try {
+                    // Tentar primeiro com Files.createDirectories
+                    Files.createDirectories(primaryPath);
+                    log.info("✅ Diretório criado com Files.createDirectories!");
+                } catch (Exception createEx) {
+                    log.warn("⚠️ Files.createDirectories falhou, tentando com File.mkdirs: {}", createEx.getMessage());
+                    // Tentar alternativa com File.mkdirs
+                    File dirFile = primaryPath.toFile();
+                    boolean created = dirFile.mkdirs();
+                    if (!created && !dirFile.exists()) {
+                        log.error("❌ Ambos os métodos falharam ao criar diretório");
+                        throw new Exception("Não foi possível criar diretório: " + createEx.getMessage(), createEx);
+                    }
+                    log.info("✅ Diretório criado com File.mkdirs!");
+                }
+            } else {
+                log.info("📁 Diretório já existe: {}", primaryPath.toAbsolutePath());
             }
 
-            // Verificar se podemos escrever
-            if (Files.exists(primaryPath) && Files.isWritable(primaryPath)) {
+            // Verificar se o diretório existe agora
+            if (!Files.exists(primaryPath)) {
+                throw new Exception("Diretório não foi criado");
+            }
+
+            // Testar escrita real criando um arquivo temporário
+            File testFile = new File(primaryPath.toFile(), ".test_write_" + System.currentTimeMillis());
+            try {
+                boolean created = testFile.createNewFile();
+                if (created) {
+                    testFile.delete();
+                    log.info("✅ Teste de escrita bem-sucedido!");
+                } else {
+                    throw new Exception("Não foi possível criar arquivo de teste");
+                }
+            } catch (Exception writeEx) {
+                log.error("❌ Erro ao testar escrita: {}", writeEx.getMessage(), writeEx);
+                throw new Exception("Sem permissão de escrita: " + writeEx.getMessage(), writeEx);
+            }
+
+            // Verificar permissões
+            File dirFile = primaryPath.toFile();
+            if (dirFile.canWrite()) {
                 baseUploadDir = primaryDir;
-                log.info("✅ Diretório de upload determinado: {} (PERSISTENTE)", baseUploadDir);
+                log.info("✅✅✅ Diretório de upload determinado: {} (PERSISTENTE)", baseUploadDir);
                 return baseUploadDir;
             } else {
                 throw new Exception("Diretório existe mas não tem permissões de escrita");
             }
         } catch (Exception e) {
             // Se falhar, tentar usar /tmp como fallback
-            log.warn("⚠️ Não foi possível usar {}: {}. Tentando fallback...", primaryDir, e.getMessage());
+            log.warn("⚠️ Não foi possível usar {}: {}", primaryDir, e.getMessage());
+            log.warn("⚠️ Stack trace: ", e);
             
             try {
                 Path fallbackPath = Paths.get(FALLBACK_DIR);
+                log.info("📁 Tentando usar fallback: {}", fallbackPath.toAbsolutePath());
+                
                 if (!Files.exists(fallbackPath)) {
                     Files.createDirectories(fallbackPath);
                 }
                 
+                // Testar escrita no fallback também
+                File testFile = new File(fallbackPath.toFile(), ".test_write_" + System.currentTimeMillis());
+                boolean created = testFile.createNewFile();
+                if (created) {
+                    testFile.delete();
+                }
+                
                 if (Files.exists(fallbackPath) && Files.isWritable(fallbackPath)) {
                     baseUploadDir = FALLBACK_DIR;
-                    log.warn("⚠️⚠️⚠️ USANDO /tmp/uploads COMO FALLBACK!");
-                    log.warn("⚠️⚠️⚠️ AVISO: Arquivos em /tmp serão PERDIDOS em reinicializações!");
-                    log.warn("⚠️⚠️⚠️ Configure permissões para /app/uploads para persistência!");
+                    log.error("❌❌❌ USANDO /tmp/uploads COMO FALLBACK!");
+                    log.error("❌❌❌ AVISO: Arquivos em /tmp serão PERDIDOS em reinicializações!");
+                    log.error("❌❌❌ Configure permissões para /app/uploads para persistência!");
                     return baseUploadDir;
                 } else {
                     throw new Exception("Fallback também falhou");
