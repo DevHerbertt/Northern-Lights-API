@@ -21,7 +21,8 @@ public class UploadDirectoryManager {
 
     /**
      * Obtém o diretório base para uploads.
-     * Tenta usar /app/uploads primeiro (persistente no Render).
+     * Prioriza variável de ambiente UPLOAD_DIR se configurada como caminho absoluto.
+     * Caso contrário, tenta usar /app/uploads (persistente no Render).
      * Usa /tmp/uploads apenas como último recurso (temporário).
      * 
      * @return Caminho absoluto do diretório base de uploads
@@ -31,8 +32,28 @@ public class UploadDirectoryManager {
             return baseUploadDir;
         }
 
-        String userDir = System.getProperty("user.dir");
-        String primaryDir = userDir + File.separator + "uploads";
+        // Verificar se UPLOAD_DIR está configurado como variável de ambiente
+        String uploadDirEnv = System.getenv("UPLOAD_DIR");
+        String primaryDir;
+        
+        if (uploadDirEnv != null && !uploadDirEnv.trim().isEmpty()) {
+            File envDir = new File(uploadDirEnv);
+            if (envDir.isAbsolute()) {
+                // Se UPLOAD_DIR é um caminho absoluto, usar diretamente
+                primaryDir = uploadDirEnv.trim();
+                log.info("📁 Usando UPLOAD_DIR da variável de ambiente (absoluto): {}", primaryDir);
+            } else {
+                // Se UPLOAD_DIR é relativo, usar user.dir como base
+                String userDir = System.getProperty("user.dir");
+                primaryDir = userDir + File.separator + uploadDirEnv.trim();
+                log.info("📁 Usando UPLOAD_DIR da variável de ambiente (relativo): {} -> {}", uploadDirEnv, primaryDir);
+            }
+        } else {
+            // Se não há variável de ambiente, usar padrão: user.dir/uploads
+            String userDir = System.getProperty("user.dir");
+            primaryDir = userDir + File.separator + "uploads";
+            log.info("📁 UPLOAD_DIR não configurado, usando padrão: {}", primaryDir);
+        }
 
         log.info("📁 Tentando configurar diretório de upload em: {}", primaryDir);
         log.info("📁 user.dir = {}", userDir);
